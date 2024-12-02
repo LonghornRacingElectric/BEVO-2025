@@ -5,7 +5,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc -p tsconfig.json",
-    "start": "concurrently --prefix none \"npm run build\" \"node dist/index.js\""
+    "start": "concurrently --prefix none \"npm run build\" \"node dist/index.js\"",
+    "start-frontend": "/frontend react-scripts start"
   },
   "keywords": [],
   "author": "",
