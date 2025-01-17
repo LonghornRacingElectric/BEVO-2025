@@ -13,9 +13,9 @@ const useWebSocket = (url: string) => {
     };
 
     socket.onmessage = (event) => {
-      const receivedData = JSON.parse(`{"id": 1190, "timestamp": 1732992177.400797, "data": 0}`);
-      console.log("*",receivedData);
-      setData(null);
+      const receivedData = JSON.parse(event.data);
+      // console.log("*",receivedData);
+      setData(receivedData);
     };
 
     socket.onclose = () => {

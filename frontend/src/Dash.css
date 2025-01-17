@@ -1,0 +1,41 @@
+.Dash {
+    text-align: center;
+    font-family: 'Courier New', Courier, monospace;
+    background-color: black;
+    height: 100vh;
+    width: 100vw;
+    overflow:hidden;
+}
+.col{
+    padding: 0%;
+    height: 100%;
+}
+.row{
+    height: 50%;
+}
+.container{
+    height: 100%;
+    padding: 0%;
+
+}
+
+.Tile{
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    color: white;
+    outline: solid;
+    padding: 5px;
+}
+
+.param{
+    text-align: left;
+    font-size: 25px;
+    font-style: italic;
+}
+.val{
+    align-content: center;
+    font-size: 100px;
+    flex-grow: 1;
+
+}
