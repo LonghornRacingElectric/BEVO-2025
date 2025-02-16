@@ -5,7 +5,7 @@ import time
 # Serial Defines
 PORT = "/dev/ttyUSB2"
 BAUDRATE = 115200
-ser = serial.Serial(port=PORT, baudrate=BAUDRATE, timeout=1)
+
 
 # GPIO setup
 FULL_CARD_POWER_OFF = 16
@@ -19,6 +19,7 @@ lgpio.gpio_claim_output(h, FULL_CARD_POWER_OFF, 0)  # Default LOW
 
 
 def shutdown_module():
+    ser = serial.Serial(port=PORT, baudrate=BAUDRATE, timeout=1)
     try:
         ser.write(b"AT+CFUN=0\r\n")  # Send AT command for shutdown
         response = ser.readline().strip()
