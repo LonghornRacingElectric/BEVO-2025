@@ -23,10 +23,11 @@ def create_sensor_data(var):
     sensor_data = template_pb2.SensorData()
     sensor_data.time = int(time.time_ns() // 1_000_000)
     sensor_data.packet_id = int(random.randint(1, 100))
+    sensor_data.dynamics.steer_col_angle(var)
     return sensor_data.SerializeToString()
 
 def publish_message(data):  
-    serialized_message = create_sensor_data(int(p_id))
+    serialized_message = create_sensor_data(int(data))
     try:
         client.publish(MQTT_TOPIC, serialized_message)
     except Exception as e:
