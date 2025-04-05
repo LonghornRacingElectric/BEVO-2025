@@ -16,9 +16,9 @@ MQTT_TOPIC = "data"
 
 bus = can.interface.Bus(bustype='socketcan', channel='can0', bitrate=1000000)
 
-def create_sensor_data(time):
+def create_sensor_data():
     sensor_data = template_pb2.SensorData()
-    sensor_data.time = 1234
+    sensor_data.time = int(time.time_ns() // 1_000_000)
 
     return sensor_data.SerializeToString()
 
@@ -26,7 +26,7 @@ def publish_message(data):
     client = mqtt.Client()
     client.connect(MQTT_BROKER, MQTT_PORT, 60)
 
-    serialized_message = create_sensor_data(data)
+    serialized_message = create_sensor_data()
     client.publish(MQTT_TOPIC, serialized_message)
     print("Message sent!")
 
