@@ -66,7 +66,7 @@ async def send_message(websocket):
         msg = bus.recv(timeout=1.0)  
         data = {
             "id": msg.arbitration_id,
-            "timestamp": time + 0.0,
+            "timestamp": msg.timestamp,
             "data": list(msg.data),
         }
         now = time.time()
