@@ -18,7 +18,7 @@ client.connect(MQTT_BROKER, MQTT_PORT, 60)
 
 bus = can.interface.Bus(bustype='socketcan', channel='can0', bitrate=1000000)
 
-
+p_id = 0
 def create_sensor_data(var):
     sensor_data = template_pb2.SensorData()
     sensor_data.time = int(time.time_ns() // 1_000_000)
@@ -26,7 +26,8 @@ def create_sensor_data(var):
     return sensor_data.SerializeToString()
 
 def publish_message(data):  
-    serialized_message = create_sensor_data(1)
+    p_id = p_id + 1
+    serialized_message = create_sensor_data(int(p_id))
     try:
         client.publish(MQTT_TOPIC, serialized_message)
     except Exception as e:
