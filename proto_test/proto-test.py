@@ -1,9 +1,9 @@
 import template_pb2 
 import paho.mqtt.client as mqtt
 
-MQTT_BROKER = "mqtt.example.com"
-MQTT_PORT = 1883
-MQTT_TOPIC = "sensor/data"
+MQTT_BROKER = "192.168.1.109"
+MQTT_PORT = 8080
+MQTT_TOPIC = "data"
 
 def create_sensor_data():
     sensor_data = template_pb2.SensorData()
