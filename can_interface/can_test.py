@@ -1,11 +1,11 @@
 import can
 
 def main():
-    bus = can.interface.Bus(bustype='socketcan', channel='can0', bitrate=500000)
+    bus = can.interface.Bus(bustype='socketcan', channel='can0', bitrate=1000000)
     try:
         print("Listening for CAN messages... Press Ctrl+C to exit.")
         while True:
-            message = bus.recv(timeout=1.0)  # Timeout to allow graceful exit
+            message = bus.recv(timeout=1.0)  
             if message:
                 print(f"Received: {message}")
     except KeyboardInterrupt:
