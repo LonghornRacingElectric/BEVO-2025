@@ -33,7 +33,6 @@ def publish_message(data):
     client.disconnect()
 
 async def send_message(websocket):
-    time = 0
     last_tick = time.time()
     while True:
 
