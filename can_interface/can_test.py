@@ -1,21 +1,18 @@
 import can
 
-# Create a CAN bus instance (using socketcan for Linux or use 'pcan', 'usb2can', etc.)
-bus = can.interface.Bus(bustype='socketcan', channel='can0', bitrate=500000)
+def main():
+    bus = can.interface.Bus(bustype='socketcan', channel='can0', bitrate=500000)
+    try:
+        print("Listening for CAN messages... Press Ctrl+C to exit.")
+        while True:
+            message = bus.recv(timeout=1.0)  # Timeout to allow graceful exit
+            if message:
+                print(f"Received: {message}")
+    except KeyboardInterrupt:
+        print("\nCtrl+C received. Exiting.")
+    finally:
+        print("Shutting down CAN bus.")
+        bus.shutdown()
 
-# Create a CAN message
-msg = can.Message(arbitration_id=0x123,
-                  data=[0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88],
-                  is_extended_id=False)
-# try:
-#     bus.send(msg)
-#     print("Message sent on {}".format(bus.channel_info))
-# except can.CanError:
-#     print("Message NOT sent")
-
-print("Listening for a message...")
-message = bus.recv(timeout=10.0)
-if message:
-    print("Received message:", message)
-else:
-    print("No message received within timeout")
+if __name__ == "__main__":
+    main()
