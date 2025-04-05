@@ -10,8 +10,8 @@ import template_pb2
 import paho.mqtt.client as mqtt
 
 MQTT_BROKER = "192.168.1.109"
-MQTT_PORT = 8080
-MQTT_TOPIC = "data/"
+MQTT_PORT = 1883
+MQTT_TOPIC = "data"
 
 
 bus = can.interface.Bus(bustype='socketcan', channel='can0', bitrate=1000000)
