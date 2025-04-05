@@ -23,8 +23,7 @@ idd = int(0)
 def create_sensor_data():
     sensor_data = template_pb2.SensorData()
     sensor_data.time = int(time.time_ns() // 1_000_000)
-    var = 1
-    sensor_data.packet_id = int(var)
+    sensor_data.packet_id = 1
     idd += 1
     # idd = idd + int(1)
     return sensor_data.SerializeToString()
