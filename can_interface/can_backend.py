@@ -63,12 +63,6 @@ def publish_message(data):
 async def send_message(websocket):
     time = 0
     while True:
-        arbitration_id = 0x123
-        size = random.randint(1, 8)
-        can_data = [random.randint(0, 255)]
-        for _ in range(size - 1):
-            can_data.append(random.randint(0, 255))
-        
         msg = bus.recv(timeout=1.0)  
         data = {
             "id": msg.arbitration_id,
