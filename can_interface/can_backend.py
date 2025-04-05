@@ -19,7 +19,7 @@ bus = can.interface.Bus(bustype='socketcan', channel='can0', bitrate=1000000)
 
 def create_sensor_data(id):
     sensor_data = template_pb2.SensorData()
-    sensor_data.time = int(time.time() * 1000)
+    sensor_data.time = time.time_ns() // 1_000_000
     sensor_data.packet_id = id
     
 
