@@ -53,7 +53,7 @@ async def send_message(websocket):
         json_data = json.dumps(data)
         message_to_send = json_data 
         try:
-            await websocket.send(message_to_send)
+            websocket.send(message_to_send)
             print(f"Sent message: {message_to_send}")
             await asyncio.sleep(.01)
         except asyncio.exceptions.CancelledError or KeyboardInterrupt:
