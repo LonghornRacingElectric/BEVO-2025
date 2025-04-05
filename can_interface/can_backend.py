@@ -74,7 +74,6 @@ async def send_message(websocket):
                 print("sent to server")
                 publish_message(msg.data[0]/10)
                 last_tick = now
-        time += 1
         print(data)
         json_data = json.dumps(data)
         message_to_send = json_data 
