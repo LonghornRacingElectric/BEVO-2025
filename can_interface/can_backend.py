@@ -61,7 +61,7 @@ def publish_message(data):
 #             break
 
 async def send_message(websocket):
-    time = 0
+    last_tick = time.time()
     while True:
         msg = bus.recv(timeout=1.0)  
         data = {
@@ -69,6 +69,11 @@ async def send_message(websocket):
             "timestamp": time + 0.0,
             "data": list(msg.data),
         }
+        now = time.time()
+        if now - last_tick >= 1.0:
+                print("sent to server")
+                publish_message(msg.data[0]/10)
+                last_tick = now
         time += 1
         print(data)
         json_data = json.dumps(data)
