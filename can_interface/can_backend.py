@@ -49,7 +49,7 @@ async def send_message(websocket):
             "data": list(msg.data),
         }
         time += 1
-        # print(data)
+        print(data)
         json_data = json.dumps(data)
         message_to_send = json_data 
         try:
