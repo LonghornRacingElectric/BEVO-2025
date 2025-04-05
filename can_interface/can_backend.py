@@ -20,7 +20,7 @@ bus = can.interface.Bus(bustype='socketcan', channel='can0', bitrate=1000000)
 def create_sensor_data(id):
     sensor_data = template_pb2.SensorData()
     sensor_data.time = time.time_ns() // 1_000_000
-    sensor_data.packet_id = id
+    # sensor_data.packet_id = id
     
 
     return sensor_data.SerializeToString()
@@ -32,7 +32,7 @@ def publish_message(data):
     serialized_message = create_sensor_data(eid)
     client.publish(MQTT_TOPIC, serialized_message)
     print("Message sent!")
-    eid += 1;
+    eid += 1
     client.disconnect()
 
 # async def send_message(websocket):
