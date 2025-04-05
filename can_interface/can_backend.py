@@ -26,7 +26,6 @@ def create_sensor_data(var):
     return sensor_data.SerializeToString()
 
 def publish_message(data):  
-    p_id = p_id + 1
     serialized_message = create_sensor_data(int(p_id))
     try:
         client.publish(MQTT_TOPIC, serialized_message)
