@@ -19,8 +19,9 @@ idd = int(0)
 def create_sensor_data():
     sensor_data = template_pb2.SensorData()
     sensor_data.time = int(time.time_ns() // 1_000_000)
-    sensor_data.packet_id = int(idd)
-    idd += idd + int(1)
+    var = 1
+    sensor_data.packet_id = int(var)
+    # idd = idd + int(1)
     return sensor_data.SerializeToString()
 
 def publish_message(data):  
@@ -28,7 +29,10 @@ def publish_message(data):
     client.connect(MQTT_BROKER, MQTT_PORT, 60)
 
     serialized_message = create_sensor_data()
-    client.publish(MQTT_TOPIC, serialized_message)
+    try:
+        client.publish(MQTT_TOPIC, serialized_message)
+    except Exception as e:
+        print("exception:", e)
     print("Message sent!")
 
     client.disconnect()
