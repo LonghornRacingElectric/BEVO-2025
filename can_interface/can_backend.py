@@ -22,7 +22,7 @@ p_id = 0
 def create_sensor_data(var):
     sensor_data = template_pb2.SensorData()
     sensor_data.time = int(time.time_ns() // 1_000_000)
-    sensor_data.packet_id = var
+    sensor_data.packet_id = int(str(p_id))
     return sensor_data.SerializeToString()
 
 def publish_message(data):  
