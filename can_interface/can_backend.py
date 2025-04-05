@@ -19,7 +19,8 @@ idd = 0
 def create_sensor_data():
     sensor_data = template_pb2.SensorData()
     sensor_data.time = int(time.time_ns() // 1_000_000)
-    sensor_data.packet_id = int(1)
+    sensor_data.packet_id = int(idd)
+    idd += 1
     return sensor_data.SerializeToString()
 
 def publish_message(data):  
