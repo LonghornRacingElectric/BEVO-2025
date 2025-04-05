@@ -8,11 +8,6 @@ MQTT_TOPIC = "data"
 def create_sensor_data():
     sensor_data = template_pb2.SensorData()
     sensor_data.time = 1234567890
-    sensor_data.packet_id = 42
-
-    sensor_data.dynamic_data.acc_pedal.append(0.8)
-    sensor_data.dynamic_data.brake_pedal = 0.2
-    sensor_data.dynamic_data.steering_angle = 15.0
 
     return sensor_data.SerializeToString()
 
