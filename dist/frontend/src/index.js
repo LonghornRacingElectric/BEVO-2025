@@ -6,11 +6,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const react_1 = __importDefault(require("react"));
 const client_1 = __importDefault(require("react-dom/client"));
 require("./index.css");
-const App_1 = __importDefault(require("./App"));
+const Dash_1 = __importDefault(require("./Dash"));
 const reportWebVitals_1 = __importDefault(require("./reportWebVitals"));
 const root = client_1.default.createRoot(document.getElementById('root'));
 root.render(<react_1.default.StrictMode>
-    <App_1.default />
+    <Dash_1.default />
   </react_1.default.StrictMode>);
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))

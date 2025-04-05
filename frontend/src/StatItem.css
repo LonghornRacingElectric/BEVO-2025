@@ -1,0 +1,33 @@
+.stat-item{
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    margin: 10px;
+    font-family: "Arial", sans-serif;
+}
+
+.label {
+    font-size: 14px;
+    color: gray;
+    text-transform: uppercase;
+}
+
+.value {
+    font-size: 24px;
+    font-weight: bold;
+    color: white;
+}
+
+
+.stat-item.large-stat {
+    font-size: 3rem !important;
+    font-weight: bold;
+}
+
+.stat-item.large-stat .label {
+    font-size: 1.8rem !important;
+}
+
+.stat-item.large-stat .value {
+    font-size: 3rem !important;
+}
