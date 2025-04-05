@@ -32,29 +32,56 @@ def publish_message(data):
 
     client.disconnect()
 
-async def send_message(websocket):
-    # last_tick = time.time()
-    while True:
+# async def send_message(websocket):
+#     last_tick = time.time()
+#     while True:
 
-        msg = bus.recv(timeout=1.0)  
-        # now = time.time()
-        # if now - last_tick >= 1.0:
-        #         print("sent to server")
-        #         # publish_message(msg.data[0]/10)
-        #         last_tick = now
+#         msg = bus.recv(timeout=1.0)  
+#         now = time.time()
+#         if now - last_tick >= 1.0:
+#                 print("sent to server")
+#                 publish_message(msg.data[0]/10)
+#                 last_tick = now
                 
+#         data = {
+#             "id": msg.arbitration_id,
+#             "timestamp": time + 0.0,
+#             "data": list(msg.data),
+#         }
+#         time += 1
+#         # print(data)
+#         json_data = json.dumps(data)
+#         message_to_send = json_data 
+#         try:
+#             await websocket.send(message_to_send)
+#             # print(f"Sent message: {message_to_send}")
+#             await asyncio.sleep(.01)
+#         except asyncio.exceptions.CancelledError or KeyboardInterrupt:
+#             print("Connection closed, unable to send message.")
+#             break
+
+async def send_message(websocket):
+    time = 0
+    while True:
+        arbitration_id = 0x123
+        size = random.randint(1, 8)
+        can_data = [random.randint(0, 255)]
+        for _ in range(size - 1):
+            can_data.append(random.randint(0, 255))
+        
+        msg = bus.recv(timeout=1.0)  
         data = {
             "id": msg.arbitration_id,
             "timestamp": time + 0.0,
             "data": list(msg.data),
         }
         time += 1
-        # print(data)
+        print(data)
         json_data = json.dumps(data)
         message_to_send = json_data 
         try:
-            websocket.send(message_to_send)
-            print(f"Sent message: {message_to_send}")
+            await websocket.send(message_to_send)
+            # print(f"Sent message: {message_to_send}")
             await asyncio.sleep(.01)
         except asyncio.exceptions.CancelledError or KeyboardInterrupt:
             print("Connection closed, unable to send message.")
