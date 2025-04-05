@@ -23,7 +23,7 @@ def create_sensor_data(var):
     sensor_data = template_pb2.SensorData()
     sensor_data.time = int(time.time_ns() // 1_000_000)
     sensor_data.packet_id = int(random.randint(1, 100))
-    sensor_data.dynamics.steer_col_angle(float(var))
+    sensor_data.dynamics.steer_col_angle = float(var)
     return sensor_data.SerializeToString()
 
 def publish_message(data):  
