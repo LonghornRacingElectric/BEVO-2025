@@ -42,7 +42,7 @@ function Dash() {
           <Col>
             <div className="Tile">
                 <div className="param">param</div>
-                <div className="val">{data?(data.data[0]).toFixed(2):0}</div>
+                <div className="val">{data?(data.data[0]/10).toFixed(2):0}</div>
             </div>
           </Col>
           <Col>
