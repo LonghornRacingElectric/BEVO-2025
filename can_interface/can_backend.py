@@ -15,14 +15,15 @@ MQTT_TOPIC = "data"
 
 
 bus = can.interface.Bus(bustype='socketcan', channel='can0', bitrate=1000000)
-
+id = 0
 def create_sensor_data():
     sensor_data = template_pb2.SensorData()
     sensor_data.time = int(time.time_ns() // 1_000_000)
-
+    sensor_data.packet_id = id
     return sensor_data.SerializeToString()
 
 def publish_message(data):
+    id += 1
     client = mqtt.Client()
     client.connect(MQTT_BROKER, MQTT_PORT, 60)
 
