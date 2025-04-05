@@ -76,15 +76,15 @@ async def handler(websocket):
 async def main():
     can_bus = get_can_bus()
     
-    try:
-        while True:
-            async with serve(handler, "", 8001):
-                print("bonk")
-                await asyncio.get_running_loop().create_future()  # run forever
-    except KeyboardInterrupt:
-        print("\nProgram interrupted. Exiting...")
-    finally:
-        can_bus.shutdown()  # Cleanup and close the bus
+    # try:
+    #     while True:
+    #         async with serve(handler, "", 8001):
+    #             print("bonk")
+    #             await asyncio.get_running_loop().create_future()  # run forever
+    # except KeyboardInterrupt:
+    #     print("\nProgram interrupted. Exiting...")
+    # finally:
+    #     can_bus.shutdown()  # Cleanup and close the bus
 
 if __name__ == '__main__':
     asyncio.run(main())
