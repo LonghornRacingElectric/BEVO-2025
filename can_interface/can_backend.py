@@ -6,8 +6,31 @@ from websockets.exceptions import ConnectionClosedOK
 import json
 import time
 
+import template_pb2 
+import paho.mqtt.client as mqtt
+
+MQTT_BROKER = "192.168.1.109"
+MQTT_PORT = 1883
+MQTT_TOPIC = "sensor/data"
+
 
 bus = can.interface.Bus(bustype='socketcan', channel='can0', bitrate=1000000)
+
+def create_sensor_data(time):
+    sensor_data = template_pb2.SensorData()
+    sensor_data.time = time
+
+    return sensor_data.SerializeToString()
+
+def publish_message(data):
+    client = mqtt.Client()
+    client.connect(MQTT_BROKER, MQTT_PORT, 60)
+
+    serialized_message = create_sensor_data(data)
+    client.publish(MQTT_TOPIC, serialized_message)
+    print("Message sent!")
+
+    client.disconnect()
 
 async def send_message(websocket):
     time = 0
@@ -17,7 +40,8 @@ async def send_message(websocket):
         msg = bus.recv(timeout=1.0)  
         now = time.time()
         if now - last_tick >= 1.0:
-                print("Tick: 1 second passed")
+                print("sent to server")
+                publish_message(msg.data[0]/10)
                 last_tick = now
                 
         data = {
@@ -26,7 +50,7 @@ async def send_message(websocket):
             "data": list(msg.data),
         }
         time += 1
-        print(data)
+        # print(data)
         json_data = json.dumps(data)
         message_to_send = json_data 
         try:
