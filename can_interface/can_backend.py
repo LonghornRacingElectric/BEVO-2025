@@ -13,26 +13,23 @@ MQTT_BROKER = "192.168.1.109"
 MQTT_PORT = 1883
 MQTT_TOPIC = "data"
 
-eid = 0
 
 bus = can.interface.Bus(bustype='socketcan', channel='can0', bitrate=1000000)
 
-def create_sensor_data(id):
+def create_sensor_data(time):
     sensor_data = template_pb2.SensorData()
     sensor_data.time = 1234
-    # sensor_data.packet_id = id
-    
 
     return sensor_data.SerializeToString()
 
 def publish_message(data):
-    
     client = mqtt.Client()
     client.connect(MQTT_BROKER, MQTT_PORT, 60)
-    serialized_message = create_sensor_data(eid)
+
+    serialized_message = create_sensor_data(data)
     client.publish(MQTT_TOPIC, serialized_message)
     print("Message sent!")
-    eid += 1
+
     client.disconnect()
 
 # async def send_message(websocket):
