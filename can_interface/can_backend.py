@@ -4,19 +4,22 @@ import asyncio
 from websockets import serve
 from websockets.exceptions import ConnectionClosedOK
 import json
+import time
+
 
 bus = can.interface.Bus(bustype='socketcan', channel='can0', bitrate=1000000)
 
 async def send_message(websocket):
     time = 0
+    last_tick = time.time()
     while True:
-        arbitration_id = 0x123
-        size = random.randint(1, 8)
-        can_data = [random.randint(0, 255)]
-        for _ in range(size - 1):
-            can_data.append(random.randint(0, 255))
-        
+
         msg = bus.recv(timeout=1.0)  
+        now = time.time()
+        if now - last_tick >= 1.0:
+                print("Tick: 1 second passed")
+                last_tick = now
+                
         data = {
             "id": msg.arbitration_id,
             "timestamp": time + 0.0,
