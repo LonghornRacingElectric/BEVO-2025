@@ -12,7 +12,7 @@ async def send_message(websocket):
         arbitration_id = 0x123
         size = random.randint(1, 8)
         can_data = [random.randint(0, 255)]
-        for i in range(size - 1):
+        for _ in range(size - 1):
             can_data.append(random.randint(0, 255))
 
         msg = can.Message(arbitration_id=arbitration_id, data=can_data)
