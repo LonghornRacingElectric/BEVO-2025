@@ -7,7 +7,7 @@
 }
 
 .label {
-    font-size: 14px;
+    font-size: 16px;
     color: gray;
     text-transform: uppercase;
 }
@@ -29,5 +29,5 @@
 }
 
 .stat-item.large-stat .value {
-    font-size: 3rem !important;
+    font-size: 4rem !important;
 }

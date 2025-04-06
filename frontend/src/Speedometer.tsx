@@ -38,7 +38,7 @@ const Speedometer: React.FC<SpeedometerProps> = ({
 
     useEffect(() => {
         if (progressRef.current) {
-            progressRef.current.style.transition = "stroke-dashoffset .3s ease-in-out";
+            progressRef.current.style.transition = "stroke-dashoffset .15s ease-in-out";
             progressRef.current.style.strokeDashoffset = `${strokeDashoffset}`;
         }
     }, [strokeDashoffset]);
