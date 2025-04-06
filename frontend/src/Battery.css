@@ -1,0 +1,37 @@
+.battery-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.battery {
+    width: 60px;
+    height: 25px;
+    border: 2px solid white;
+    position: relative;
+    border-radius: 5px;
+    overflow: hidden;
+    background-color: black;
+}
+
+.battery::after {
+    content: "";
+    position: absolute;
+    top: 6px;
+    right: -6px;
+    width: 6px;
+    height: 12px;
+    background: white;
+    border-radius: 2px;
+}
+
+.battery-level {
+    height: 100%;
+    transition: width 0.5s ease-in-out;
+}
+
+.battery-text {
+    font-size: 16px;
+    font-weight: bold;
+    color: white;
+}

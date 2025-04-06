@@ -1,0 +1,16 @@
+.speedometer-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%; /* Ensure it spans full width */
+    height: auto; /* Adjust height dynamically */
+    min-height: 100vh; /* Ensure it doesn’t collapse */
+    overflow: visible; /* Prevent clipping */
+}
+
+svg {
+    display: block;
+    max-width: 100%; /* Ensure it scales within its container */
+    height: auto;
+    overflow: visible; /* Make sure nothing is clipped */
+}
