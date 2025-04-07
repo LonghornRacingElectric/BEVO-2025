@@ -34,6 +34,8 @@ async def send_message(websocket):
     try:
         while True:
             msg = bus.recv(timeout=1.0)
+            print(msg)
+
             data = {
                 "id": msg.arbitration_id,
                 "timestamp": msg.timestamp,
@@ -51,7 +53,6 @@ async def send_message(websocket):
             #     os.environ["p_id"] = str(p_id + 1)
             #     # can_buffer.clear()
             #     last_tick = now
-            print(data)
             json_data = json.dumps(data)
             message_to_send = json_data
             try:
