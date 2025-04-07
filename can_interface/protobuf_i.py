@@ -9,7 +9,6 @@ def publish_msg(mqtt_client, can_buffer, packet_id, topic="data"):
     for can_msg in can_buffer:
         can_id = can_msg["id"]
         data = can_msg["data"]
-        print(type(CAN_MAPPING))
         if can_id not in CAN_MAPPING:
             print(f"[WARN] Parse failed for CAN 0x{can_id:X}: {e}")
             continue
