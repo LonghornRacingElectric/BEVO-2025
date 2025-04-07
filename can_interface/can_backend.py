@@ -36,36 +36,36 @@ async def send_message(websocket):
             try:
                 msg = bus.recv(timeout=1.0)
                 print(msg)
+                if(msg):
+                    data = {
+                        "id": msg.arbitration_id,
+                        "timestamp": msg.timestamp,
+                        "data": list(msg.data),
+                    }
 
-                data = {
-                    "id": msg.arbitration_id,
-                    "timestamp": msg.timestamp,
-                    "data": list(msg.data),
-                }
+                    # can_buffer.append(data)
 
-                # can_buffer.append(data)
-
-                # now = time.time()
-                # if now - last_tick >= 003.0:
-                #     p_id = int(os.getenv("p_id"))
-                #     # proto.publish_msg(
-                #     #     mqtt_client=client, can_buffer=can_buffer, packet_id=p_id
-                #     # )
-                #     os.environ["p_id"] = str(p_id + 1)
-                #     # can_buffer.clear()
-                #     last_tick = now
-                json_data = json.dumps(data)
-                message_to_send = json_data
+                    # now = time.time()
+                    # if now - last_tick >= 003.0:
+                    #     p_id = int(os.getenv("p_id"))
+                    #     # proto.publish_msg(
+                    #     #     mqtt_client=client, can_buffer=can_buffer, packet_id=p_id
+                    #     # )
+                    #     os.environ["p_id"] = str(p_id + 1)
+                    #     # can_buffer.clear()
+                    #     last_tick = now
+                    json_data = json.dumps(data)
+                    message_to_send = json_data
+                    try:
+                        print("ttied")
+                        await websocket.send(message_to_send)
+                        # print(f"Sent message: {message_to_send}")
+                        await asyncio.sleep(0.01)
+                    except asyncio.exceptions.CancelledError or KeyboardInterrupt:
+                        print("Connection closed, unable to send message.")
+                        break
             except Exception as e:
                 print(e)
-            try:
-                print("ttied")
-                await websocket.send(message_to_send)
-                # print(f"Sent message: {message_to_send}")
-                await asyncio.sleep(0.01)
-            except asyncio.exceptions.CancelledError or KeyboardInterrupt:
-                print("Connection closed, unable to send message.")
-                break
     except KeyboardInterrupt:
         print("Stopping.")
     finally:
