@@ -29,8 +29,8 @@ bus = can.interface.Bus(bustype="socketcan", channel="can0", bitrate=1000000)
 
 
 async def send_message(websocket):
-    last_tick = time.time()
-    can_buffer = []
+    # last_tick = time.time()
+    # can_buffer = []
     try:
         while True:
             msg = bus.recv(timeout=1.0)
@@ -40,17 +40,17 @@ async def send_message(websocket):
                 "data": list(msg.data),
             }
 
-            can_buffer.append(data)
+            # can_buffer.append(data)
 
-            now = time.time()
-            if now - last_tick >= 003.0:
-                p_id = int(os.getenv("p_id"))
-                # proto.publish_msg(
-                #     mqtt_client=client, can_buffer=can_buffer, packet_id=p_id
-                # )
-                os.environ["p_id"] = str(p_id + 1)
-                can_buffer.clear()
-                last_tick = now
+            # now = time.time()
+            # if now - last_tick >= 003.0:
+            #     p_id = int(os.getenv("p_id"))
+            #     # proto.publish_msg(
+            #     #     mqtt_client=client, can_buffer=can_buffer, packet_id=p_id
+            #     # )
+            #     os.environ["p_id"] = str(p_id + 1)
+            #     # can_buffer.clear()
+            #     last_tick = now
             print(data)
             json_data = json.dumps(data)
             message_to_send = json_data
