@@ -24,7 +24,7 @@ import requests
 # print(res.json()["last_packet"])
 # os.environ["p_id"] = str(res.json()["last_packet"])
 client = mqtt.Client()
-client.connect(MQTT_BROKER, MQTT_PORT, 60)
+# client.connect(MQTT_BROKER, MQTT_PORT, 60)
 bus = can.interface.Bus(bustype="socketcan", channel="can0", bitrate=1000000)
 
 
