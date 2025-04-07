@@ -15,7 +15,7 @@ import os
 
 os.environ["p_id"] = "0"
 
-client = mqtt.Client()
+# client = mqtt.Client()
 # client.connect(MQTT_BROKER, MQTT_PORT, 60)
 
 import requests
@@ -33,28 +33,31 @@ async def send_message(websocket):
     # can_buffer = []
     try:
         while True:
-            msg = bus.recv(timeout=1.0)
-            print(msg)
+            try:
+                msg = bus.recv(timeout=1.0)
+                print(msg)
 
-            data = {
-                "id": msg.arbitration_id,
-                "timestamp": msg.timestamp,
-                "data": list(msg.data),
-            }
+                data = {
+                    "id": msg.arbitration_id,
+                    "timestamp": msg.timestamp,
+                    "data": list(msg.data),
+                }
 
-            # can_buffer.append(data)
+                # can_buffer.append(data)
 
-            # now = time.time()
-            # if now - last_tick >= 003.0:
-            #     p_id = int(os.getenv("p_id"))
-            #     # proto.publish_msg(
-            #     #     mqtt_client=client, can_buffer=can_buffer, packet_id=p_id
-            #     # )
-            #     os.environ["p_id"] = str(p_id + 1)
-            #     # can_buffer.clear()
-            #     last_tick = now
-            json_data = json.dumps(data)
-            message_to_send = json_data
+                # now = time.time()
+                # if now - last_tick >= 003.0:
+                #     p_id = int(os.getenv("p_id"))
+                #     # proto.publish_msg(
+                #     #     mqtt_client=client, can_buffer=can_buffer, packet_id=p_id
+                #     # )
+                #     os.environ["p_id"] = str(p_id + 1)
+                #     # can_buffer.clear()
+                #     last_tick = now
+                json_data = json.dumps(data)
+                message_to_send = json_data
+            except Exception as e:
+                print(e)
             try:
                 print("ttied")
                 await websocket.send(message_to_send)
