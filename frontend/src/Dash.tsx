@@ -32,7 +32,7 @@ function Dash() {
   }, [data?.timestamp]);
 
   useEffect(() => {
-    if (data?.id === 0x11) {
+    if (data?.id === 224) {
       setSpeed(data.data[0]);
     } else {
       setDraw(0);
