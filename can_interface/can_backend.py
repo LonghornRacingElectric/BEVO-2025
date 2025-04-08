@@ -56,14 +56,14 @@ async def send_message(websocket):
                     
                     json_data = json.dumps(data)
                     message_to_send = json_data
-                    try:
-                        print("ttied")
-                        await websocket.send(message_to_send)
-                        # print(f"Sent message: {message_to_send}")
-                        await asyncio.sleep(0.01)
-                    except asyncio.exceptions.CancelledError or KeyboardInterrupt:
-                        print("Connection closed, unable to send message.")
-                        break
+                    # try:
+                    #     print("ttied")
+                    #     await websocket.send(message_to_send)
+                    #     # print(f"Sent message: {message_to_send}")
+                    #     await asyncio.sleep(0.01)
+                    # except asyncio.exceptions.CancelledError or KeyboardInterrupt:
+                    #     print("Connection closed, unable to send message.")
+                    #     break
             except Exception as e:
                 print(e)
     except KeyboardInterrupt:
