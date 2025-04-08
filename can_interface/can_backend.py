@@ -35,15 +35,13 @@ async def send_message(websocket):
         while True:
             try:
                 msg = bus.recv(timeout=1.0)
-                print(msg)
-                data = {}
                 if(msg):
                     data = {
                         "id": msg.arbitration_id,
                         "timestamp": msg.timestamp,
                         "data": list(msg.data),
                     }
-
+                    print(data)
                     # can_buffer.append(data)
 
                     # now = time.time()
@@ -55,16 +53,16 @@ async def send_message(websocket):
                     #     os.environ["p_id"] = str(p_id + 1)
                     #     # can_buffer.clear()
                     #     last_tick = now
-                    json_data = json.dumps(data)
-                    message_to_send = json_data
-                    try:
-                        print("ttied")
-                        await websocket.send(message_to_send)
-                        # print(f"Sent message: {message_to_send}")
-                        await asyncio.sleep(0.01)
-                    except asyncio.exceptions.CancelledError or KeyboardInterrupt:
-                        print("Connection closed, unable to send message.")
-                        break
+                    # json_data = json.dumps(data)
+                    # message_to_send = json_data
+                    # try:
+                    #     print("ttied")
+                    #     await websocket.send(message_to_send)
+                    #     # print(f"Sent message: {message_to_send}")
+                    #     await asyncio.sleep(0.01)
+                    # except asyncio.exceptions.CancelledError or KeyboardInterrupt:
+                    #     print("Connection closed, unable to send message.")
+                    #     break
             except Exception as e:
                 print(e)
     except KeyboardInterrupt:
