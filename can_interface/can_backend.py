@@ -25,11 +25,11 @@ import requests
 # os.environ["p_id"] = str(res.json()["last_packet"])
 # client = mqtt.Client()
 # client.connect(MQTT_BROKER, MQTT_PORT, 60)
-bus = can.interface.Bus(bustype="socketcan", channel="can0", bitrate=1000000)
 
 
 async def send_message(websocket):
     # last_tick = time.time()
+    bus = can.interface.Bus(bustype="socketcan", channel="can0", bitrate=1000000)
     can_buffer = []
     try:
         while True:
@@ -56,14 +56,9 @@ async def send_message(websocket):
                     
                     json_data = json.dumps(data)
                     message_to_send = json_data
-                    try:
-                        print("ttied")
-                        await websocket.send(message_to_send)
-                        # print(f"Sent message: {message_to_send}")
-                        await asyncio.sleep(0.01)
-                    except (asyncio.CancelledError, KeyboardInterrupt):
-                        print("Connection closed, unable to send message.")
-                        break
+                    message_to_send = json.dumps(data)
+                    await websocket.send(message_to_send)
+                    await asyncio.sleep(0.01)
             except Exception as e:
                 print(e)
     except KeyboardInterrupt:
