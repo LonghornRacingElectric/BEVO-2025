@@ -1,93 +1,70 @@
-import random
 import can
 import asyncio
 from websockets import serve
 from websockets.exceptions import ConnectionClosedOK
 import json
 import time
-
-import template_pb2 
+import protobuf_i as proto
 import paho.mqtt.client as mqtt
+
 
 MQTT_BROKER = "192.168.1.109"
 MQTT_PORT = 1883
 MQTT_TOPIC = "data"
+# import os
 
-client = mqtt.Client()
-client.connect(MQTT_BROKER, MQTT_PORT, 60)
+# os.environ["p_id"] = "0"
 
-bus = can.interface.Bus(bustype='socketcan', channel='can0', bitrate=1000000)
+# client = mqtt.Client()
+# client.connect(MQTT_BROKER, MQTT_PORT, 60)
 
-p_id = 0
-def create_sensor_data(var):
-    sensor_data = template_pb2.SensorData()
-    sensor_data.time = int(time.time_ns() // 1_000_000)
-    sensor_data.packet_id = int(random.randint(1, 100000000))
-    sensor_data.dynamics.steer_col_angle = float(var)
-    return sensor_data.SerializeToString()
+import requests
 
-def publish_message(data):  
-    serialized_message = create_sensor_data(int(data))
-    try:
-        client.publish(MQTT_TOPIC, serialized_message)
-    except Exception as e:
-        print("exception:", e)
-    print("Message sent!")
+# res = requests.get("https://lhrelectric.org/webtool/handshake/")
+# print(res.json()["last_packet"])
+# os.environ["p_id"] = str(res.json()["last_packet"])
+# client = mqtt.Client()
+# client.connect(MQTT_BROKER, MQTT_PORT, 60)
 
-
-
-# async def send_message(websocket):
-#     last_tick = time.time()
-#     while True:
-
-#         msg = bus.recv(timeout=1.0)  
-#         now = time.time()
-#         if now - last_tick >= 1.0:
-#                 print("sent to server")
-#                 publish_message(msg.data[0]/10)
-#                 last_tick = now
-                
-#         data = {
-#             "id": msg.arbitration_id,
-#             "timestamp": time + 0.0,
-#             "data": list(msg.data),
-#         }
-#         time += 1
-#         # print(data)
-#         json_data = json.dumps(data)
-#         message_to_send = json_data 
-#         try:
-#             await websocket.send(message_to_send)
-#             # print(f"Sent message: {message_to_send}")
-#             await asyncio.sleep(.01)
-#         except asyncio.exceptions.CancelledError or KeyboardInterrupt:
-#             print("Connection closed, unable to send message.")
-#             break
 
 async def send_message(websocket):
     last_tick = time.time()
-    while True:
-        msg = bus.recv(timeout=1.0)  
-        data = {
-            "id": msg.arbitration_id,
-            "timestamp": msg.timestamp,
-            "data": list(msg.data),
-        }
-        now = time.time()
-        if now - last_tick >= 1.0:
-                print("sent to server")
-                publish_message(list(msg.data)[0]/10)
-                last_tick = now
-        print(data)
-        json_data = json.dumps(data)
-        message_to_send = json_data 
-        try:
-            await websocket.send(message_to_send)
-            # print(f"Sent message: {message_to_send}")
-            await asyncio.sleep(.01)
-        except asyncio.exceptions.CancelledError or KeyboardInterrupt:
-            print("Connection closed, unable to send message.")
-            break
+    bus = can.interface.Bus(bustype="socketcan", channel="can0", bitrate=1000000)
+    last_can_time = 0
+    can_buffer = []
+    try:
+        while True:
+            try:
+                msg = bus.recv(timeout=0.01)
+                if(msg and (last_can_time - msg.timestamp < 0.1)):
+                    last_can_time = msg.timestamp
+                    data = {
+                        "id": msg.arbitration_id,
+                        "timestamp": msg.timestamp,
+                        "data": list(msg.data),
+                    }
+                    # print(data)
+                    can_buffer.append(data)
+
+                    now = time.time()
+                    if now - last_tick >= 003.0:
+                    #     p_id = int(os.getenv("p_id"))
+                    #     # proto.publish_msg(
+                    #     #     mqtt_client=client, can_buffer=can_buffer, packet_id=p_id
+                    #     # )
+                    #     os.environ["p_id"] = str(p_id + 1)
+                        can_buffer.clear()
+                        last_tick = now
+
+                message_to_send = json.dumps(data)
+                await websocket.send(message_to_send)
+                await asyncio.sleep(0.00018)
+            except Exception as e:
+                print(e)
+    except KeyboardInterrupt:
+        print("Stopping.")
+    finally:
+        bus.shutdown()
 
 
 async def handler(websocket):
@@ -106,7 +83,6 @@ async def handler(websocket):
         print("\n")
 
     send_task.cancel()  # stop sending task
-
 
 
 async def main():
