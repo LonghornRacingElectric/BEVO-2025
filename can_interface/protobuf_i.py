@@ -23,11 +23,11 @@ def publish_msg(mqtt_client, can_buffer, packet_id, topic="data"):
             sensor_msg.dynamics.fl_ride_height = data[6]
 
         # Set the value in the nested protobuf structure
-        obj = sensor_msg
-        parts = field_path.split('.')
-        for part in parts[:-1]:
-            obj = getattr(obj, part)
-        setattr(obj, parts[-1], value)
+        # obj = sensor_msg
+        # parts = field_path.split('.')
+        # for part in parts[:-1]:
+        #     obj = getattr(obj, part)
+        # setattr(obj, parts[-1], value)
         sensor_msg.time = int(time.time() * 1000)
         sensor_msg.packet_id = packet_id
 
