@@ -24,16 +24,16 @@ function Dash() {
   }, []);
 
   useEffect(() => {
-    if (data?.timestamp !== undefined) {
-      setDraw((data.timestamp / 10) % 100);
+    if (data?.id === 18) {
+      setDraw((data.data[6] / 10) % 100);
     } else {
       setDraw(0);
     }
-  }, [data?.timestamp]);
+  }, [data?.data[6]]);
 
   useEffect(() => {
     if (data?.id === 18) {
-      console.log(data.data[6])
+      // console.log(data.data[6])
       setSpeed(data.data[6]);
     } else {
       setDraw(0);
