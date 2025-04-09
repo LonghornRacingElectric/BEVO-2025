@@ -19,7 +19,8 @@ def publish_msg(mqtt_client, can_buffer, packet_id, topic="data"):
         # except Exception as e:
         #     print(f"[WARN] Parse failed for CAN 0x{can_id:X}: {e}")
         #     continue
-        if(can_id == 0x012):
+        if(can_id == 18):
+            print("sending")
             sensor_msg.dynamics.fl_ride_height = data[6]
 
         # Set the value in the nested protobuf structure

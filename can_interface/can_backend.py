@@ -40,7 +40,7 @@ async def send_message(websocket):
                         "timestamp": msg.timestamp,
                         "data": list(msg.data),
                     }
-                    print(data)
+                    # print(data)
                     can_buffer.append(data)
 
                     now = time.time()
