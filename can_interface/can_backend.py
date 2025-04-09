@@ -49,10 +49,10 @@ async def send_message(websocket):
                     now = time.time()
                     if now - last_tick >= 003.0:
                         p_id = int(os.getenv("p_id"))
-                        proto.publish_msg(
-                            mqtt_client=client, can_buffer=can_buffer, packet_id=p_id
-                        )
-                        os.environ["p_id"] = str(p_id + 1)
+                        # proto.publish_msg(
+                        #     mqtt_client=client, can_buffer=can_buffer, packet_id=p_id
+                        # )
+                    #     os.environ["p_id"] = str(p_id + 1)
                         can_buffer.clear()
                         last_tick = now
 
