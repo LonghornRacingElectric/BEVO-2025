@@ -12,7 +12,6 @@ import Speedometer from "./Speedometer";
 function Dash() {
   const {data, isConnected } = useWebSocket('ws://localhost:8001/');
   // console.log(data)
-  console.log(data.data[6])
   const [charge, setCharge] = useState(100);
   const [draw, setDraw] = useState(0);
   const [speed, setSpeed] = useState(0);
@@ -34,6 +33,7 @@ function Dash() {
 
   useEffect(() => {
     if (data?.id === 18) {
+      console.log(data.data[6])
       setSpeed(data.data[6]);
     } else {
       setDraw(0);
