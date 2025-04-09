@@ -9,16 +9,18 @@ def publish_msg(mqtt_client, can_buffer, packet_id, topic="data"):
     for can_msg in can_buffer:
         can_id = can_msg["id"]
         data = can_msg["data"]
-        if can_id not in CAN_MAPPING:
-            print(f"[WARN] Parse failed for CAN 0x{can_id:X}: {e}")
-            continue
+        # if can_id not in CAN_MAPPING:
+        #     print(f"[WARN] Parse failed for CAN 0x{can_id:X}: {e}")
+        #     continue
 
-        field_path, parser = CAN_MAPPING[can_id]
-        try:
-            value = parser(data)
-        except Exception as e:
-            print(f"[WARN] Parse failed for CAN 0x{can_id:X}: {e}")
-            continue
+        # field_path, parser = CAN_MAPPING[can_id]
+        # try:
+        #     value = parser(data)
+        # except Exception as e:
+        #     print(f"[WARN] Parse failed for CAN 0x{can_id:X}: {e}")
+        #     continue
+        if(can_id == 0x012):
+            sensor_msg.dynamics.fl_ride_height = data[6]
 
         # Set the value in the nested protobuf structure
         obj = sensor_msg
