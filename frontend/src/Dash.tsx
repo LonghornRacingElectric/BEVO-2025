@@ -33,11 +33,11 @@ function Dash() {
 
   useEffect(() => {
     if (data?.id === 224) {
-      setSpeed(data.data[0]);
+      setSpeed(data.data[6]);
     } else {
       setDraw(0);
     }
-  }, [data?.data[0]]);
+  }, [data?.data[6]]);
 
   return (
     <Container fluid className="Dash">
