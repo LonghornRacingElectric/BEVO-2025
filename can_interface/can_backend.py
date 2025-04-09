@@ -35,7 +35,7 @@ async def send_message(websocket):
         while True:
             try:
                 msg = bus.recv(timeout=0.01)
-                if(msg and time.time() - msg.timestamp < 0.1):
+                if(msg and (time.time() - msg.timestamp < 0.1)):
                     data = {
                         "id": msg.arbitration_id,
                         "timestamp": msg.timestamp,
