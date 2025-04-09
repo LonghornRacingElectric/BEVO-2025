@@ -27,6 +27,7 @@ def publish_msg(mqtt_client, can_buffer, packet_id, topic="data"):
                 int.from_bytes(data[2:4], "little"),
                 int.from_bytes(data[4:6], "little"),
             ]
+            print(sensor_msg.dynamics.cent_mass_accel)
 
         # Set the value in the nested protobuf structure
         # obj = sensor_msg
