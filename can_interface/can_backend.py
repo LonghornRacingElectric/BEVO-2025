@@ -11,20 +11,20 @@ import paho.mqtt.client as mqtt
 MQTT_BROKER = "192.168.1.109"
 MQTT_PORT = 1883
 MQTT_TOPIC = "data"
-# import os
+import os
 
-# os.environ["p_id"] = "0"
+os.environ["p_id"] = "0"
 
 # client = mqtt.Client()
 # client.connect(MQTT_BROKER, MQTT_PORT, 60)
 
 import requests
 
-# res = requests.get("https://lhrelectric.org/webtool/handshake/")
-# print(res.json()["last_packet"])
-# os.environ["p_id"] = str(res.json()["last_packet"])
-# client = mqtt.Client()
-# client.connect(MQTT_BROKER, MQTT_PORT, 60)
+res = requests.get("https://lhrelectric.org/webtool/handshake/")
+print(res.json()["last_packet"])
+os.environ["p_id"] = str(res.json()["last_packet"])
+client = mqtt.Client()
+client.connect(MQTT_BROKER, MQTT_PORT, 60)
 
 
 async def send_message(websocket):
