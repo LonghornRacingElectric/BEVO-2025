@@ -15,16 +15,13 @@ import os
 
 os.environ["p_id"] = "0"
 
-# client = mqtt.Client()
-# client.connect(MQTT_BROKER, MQTT_PORT, 60)
-
-import requests
-
-res = requests.get("https://lhrelectric.org/webtool/handshake/")
-print(res.json()["last_packet"])
-os.environ["p_id"] = str(res.json()["last_packet"])
 client = mqtt.Client()
 client.connect(MQTT_BROKER, MQTT_PORT, 60)
+
+import requests
+res = requests.get('https://lhrelectric.org/webtool/handshake/')
+print(res.json()['last_packet'])
+os.environ["p_id"] = str(res.json()['last_packet'])
 
 
 async def send_message(websocket):
