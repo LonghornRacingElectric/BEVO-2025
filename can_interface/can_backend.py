@@ -53,11 +53,10 @@ async def send_message(websocket):
                     #     os.environ["p_id"] = str(p_id + 1)
                         can_buffer.clear()
                         last_tick = now
-                        json_data = json.dumps(data)
-                        message_to_send = json_data
-                        message_to_send = json.dumps(data)
-                        await websocket.send(message_to_send)
-                        await asyncio.sleep(0.01)
+
+                message_to_send = json.dumps(data)
+                await websocket.send(message_to_send)
+                await asyncio.sleep(0.01)
             except Exception as e:
                 print(e)
     except KeyboardInterrupt:
