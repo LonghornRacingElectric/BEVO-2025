@@ -11,24 +11,24 @@ import paho.mqtt.client as mqtt
 MQTT_BROKER = "192.168.1.109"
 MQTT_PORT = 1883
 MQTT_TOPIC = "data"
-# import os
+import os
 
-# os.environ["p_id"] = "0"
+os.environ["p_id"] = "0"
 
-# client = mqtt.Client()
-# client.connect(MQTT_BROKER, MQTT_PORT, 60)
+client = mqtt.Client()
+client.connect(MQTT_BROKER, MQTT_PORT, 60)
 
 import requests
 
-# res = requests.get("https://lhrelectric.org/webtool/handshake/")
-# print(res.json()["last_packet"])
-# os.environ["p_id"] = str(res.json()["last_packet"])
-# client = mqtt.Client()
-# client.connect(MQTT_BROKER, MQTT_PORT, 60)
+res = requests.get("https://lhrelectric.org/webtool/handshake/")
+print(res.json()["last_packet"])
+os.environ["p_id"] = str(res.json()["last_packet"])
+client = mqtt.Client()
+client.connect(MQTT_BROKER, MQTT_PORT, 60)
 
 
 async def send_message(websocket):
-    # last_tick = time.time()
+    last_tick = time.time()
     bus = can.interface.Bus(bustype="socketcan", channel="can0", bitrate=1000000)
     can_buffer = []
     try:
@@ -41,18 +41,18 @@ async def send_message(websocket):
                         "timestamp": msg.timestamp,
                         "data": list(msg.data),
                     }
-                    print(data)
+                    # print(data)
                     can_buffer.append(data)
 
-                    # now = time.time()
-                    # if now - last_tick >= 003.0:
-                    #     p_id = int(os.getenv("p_id"))
-                    #     # proto.publish_msg(
-                    #     #     mqtt_client=client, can_buffer=can_buffer, packet_id=p_id
-                    #     # )
-                    #     os.environ["p_id"] = str(p_id + 1)
-                    #     # can_buffer.clear()
-                    #     last_tick = now
+                    now = time.time()
+                    if now - last_tick >= 003.0:
+                        p_id = int(os.getenv("p_id"))
+                        # proto.publish_msg(
+                        #     mqtt_client=client, can_buffer=can_buffer, packet_id=p_id
+                        # )
+                        os.environ["p_id"] = str(p_id + 1)
+                        # can_buffer.clear()
+                        last_tick = now
                     
                     json_data = json.dumps(data)
                     message_to_send = json_data
