@@ -23,7 +23,7 @@ def publish_msg(mqtt_client, can_buffer, packet_id, topic="data"):
             print("sending")
             sensor_msg.dynamics.fl_ride_height = data[6]
             print(int.from_bytes(bytes(data[0:2]), "little"))
-            sensor_msg.dynamics.cent_mass_accel[:] = [0.1, -9.81, 0.05]
+            sensor_msg.dynamics.cent_mass_accel[:] = [int.from_bytes(bytes(data[0:2]), "little"), int.from_bytes(bytes(data[2:4]), "little"), int.from_bytes(bytes(data[4:6]), "little")]
 
             print(sensor_msg.dynamics.cent_mass_accel)
 
