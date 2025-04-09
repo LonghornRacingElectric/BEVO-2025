@@ -30,12 +30,14 @@ import requests
 async def send_message(websocket):
     last_tick = time.time()
     bus = can.interface.Bus(bustype="socketcan", channel="can0", bitrate=1000000)
+    last_can_time = 0
     can_buffer = []
     try:
         while True:
             try:
                 msg = bus.recv(timeout=0.01)
-                if(msg and (time.time() - msg.timestamp < 0.1)):
+                if(msg and (last_can_time - msg.timestamp < 0.1)):
+                    last_can_time = msg.timestamp
                     data = {
                         "id": msg.arbitration_id,
                         "timestamp": msg.timestamp,
