@@ -22,11 +22,8 @@ def publish_msg(mqtt_client, can_buffer, packet_id, topic="data"):
         if can_id == 18:
             print("sending")
             sensor_msg.dynamics.fl_ride_height = data[6]
-            sensor_msg.dynamics.cent_mass_accel = [
-                int.from_bytes(data[0:2], "little"),
-                int.from_bytes(data[2:4], "little"),
-                int.from_bytes(data[4:6], "little"),
-            ]
+            sensor_msg.dynamics.cent_mass_accel[:] = [0.1, -9.81, 0.05]
+
             print(sensor_msg.dynamics.cent_mass_accel)
 
         # Set the value in the nested protobuf structure
