@@ -28,7 +28,7 @@ import requests
 
 
 async def send_message(websocket):
-    # last_tick = time.time()
+    last_tick = time.time()
     bus = can.interface.Bus(bustype="socketcan", channel="can0", bitrate=1000000)
     can_buffer = []
     try:
@@ -44,21 +44,20 @@ async def send_message(websocket):
                     # print(data)
                     can_buffer.append(data)
 
-                    # now = time.time()
-                    # if now - last_tick >= 003.0:
+                    now = time.time()
+                    if now - last_tick >= 003.0:
                     #     p_id = int(os.getenv("p_id"))
                     #     # proto.publish_msg(
                     #     #     mqtt_client=client, can_buffer=can_buffer, packet_id=p_id
                     #     # )
                     #     os.environ["p_id"] = str(p_id + 1)
-                    #     # can_buffer.clear()
-                    #     last_tick = now
-                    
-                    json_data = json.dumps(data)
-                    message_to_send = json_data
-                    message_to_send = json.dumps(data)
-                    await websocket.send(message_to_send)
-                    await asyncio.sleep(0.01)
+                        can_buffer.clear()
+                        last_tick = now
+                        json_data = json.dumps(data)
+                        message_to_send = json_data
+                        message_to_send = json.dumps(data)
+                        await websocket.send(message_to_send)
+                        await asyncio.sleep(0.01)
             except Exception as e:
                 print(e)
     except KeyboardInterrupt:
