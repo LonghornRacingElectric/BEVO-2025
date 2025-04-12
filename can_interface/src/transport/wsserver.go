@@ -43,7 +43,7 @@ func handleConnection(w http.ResponseWriter, r *http.Request, dataMutex *sync.RW
 			log.Println(err)
 			return
 		}
-		log.Printf("Sent message: %s", jsonData)
+		log.Printf("[WEBSOCKET SERVER] Sent message: %s", jsonData)
 		time.Sleep(100 * time.Millisecond)
 	}
 }

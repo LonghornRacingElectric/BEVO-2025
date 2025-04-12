@@ -138,7 +138,7 @@ func main() {
 		dashData["data"] = newData
 		dashMutex.Unlock() // Release write lock
 
-		// log.Println("Data updated")
+		log.Println("[MAIN GOROUTINE] Data updated")
 	}
 
 }
