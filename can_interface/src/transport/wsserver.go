@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -17,7 +18,7 @@ var upgrader = websocket.Upgrader{
 }
 
 // Define a handler function for WebSocket connections.
-func handleConnection(w http.ResponseWriter, r *http.Request) {
+func handleConnection(w http.ResponseWriter, r *http.Request, dataMutex *sync.RWMutex, data *map[string]interface{}) { // Receive mutex and pointer
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
@@ -27,34 +28,33 @@ func handleConnection(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Client connected")
 
-	data := map[string]interface{}{
-		"id":         0x113,
-		"time_stamp": time.Now().UnixNano(),
-		"data":       []float64{40.0},
-	}
-
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		log.Println("Error marshalling JSON:", err)
-		return
-	}
-
 	for {
+		// Read the data safely using the mutex.
+		dataMutex.RLock()                    // Acquire read lock
+		jsonData, err := json.Marshal(*data) // Dereference the pointer
+		dataMutex.RUnlock()                  // Release read lock
+		if err != nil {
+			log.Println("Error marshalling JSON:", err)
+			return
+		}
+
 		err = conn.WriteMessage(websocket.TextMessage, jsonData)
 		if err != nil {
 			log.Println(err)
 			return
 		}
 		log.Printf("Sent message: %s", jsonData)
-		// time.Sleep(100 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 	}
 }
 
-func StartWebSocketServer(addr string) error {
-	http.HandleFunc("/", handleConnection) // Use the local handleConnection
+func StartWebSocketServer(addr string, dataMutex *sync.RWMutex, data *map[string]interface{}) error { // Add mutex and pointer
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		handleConnection(w, r, dataMutex, data) // Pass them to handleConnection
+	})
 	err := http.ListenAndServe(addr, nil)
 	if err != nil {
-		log.Println("ListenAndServe Error:", err) // Log the error.
+		log.Println("ListenAndServe Error:", err)
 		return err
 	}
 	return nil

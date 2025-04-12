@@ -96,25 +96,49 @@ package main
 
 import (
 	"log"
-	// "net/http"
+	"math/rand/v2"
+	"sync"
 	"time"
 
 	"src/transport"
 )
 
+// mutex to keep dash data safe between threads
+var dashMutex sync.RWMutex
+var dashData map[string]interface{}
+
 func main() {
+
+	dashData := map[string]interface{}{
+		"id":         275,
+		"time_stamp": time.Now().UnixNano(),
+		"data":       []float64{40.0},
+	}
+
 	// Start the WebSocket server in a goroutine.
 	go func() {
 		log.Println("Starting WebSocket server on :8001")
-		if err := transport.StartWebSocketServer(":8001"); err != nil {
+		if err := transport.StartWebSocketServer(":8001", &dashMutex, &dashData); err != nil {
 			log.Fatalf("Failed to start WebSocket server: %v", err)
 		}
 	}()
 
 	log.Println("Main application running...")
 	for {
-		log.Println("Doing some main application work...")
-		time.Sleep(5 * time.Second) // Simulate work with a 5-second sleep
+		// Update the data with new values.
+		dashMutex.Lock()
+		dashData["time_stamp"] = time.Now().UnixNano()
+
+		// Generate some random data.
+		newData := []float64{
+			100 + rand.Float64()*50,
+			200 + rand.Float64()*50,
+			300 + rand.Float64()*50,
+		}
+		dashData["data"] = newData
+		dashMutex.Unlock() // Release write lock
+
+		// log.Println("Data updated")
 	}
 
 }

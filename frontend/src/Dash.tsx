@@ -33,7 +33,7 @@ function Dash() {
 
   useEffect(() => {
     if (data?.id === 275) {
-      setSpeed(data.data[0]);
+      setSpeed(parseInt(data.data[0]));
     } else {
       setDraw(0);
     }
