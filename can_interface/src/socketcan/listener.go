@@ -3,9 +3,9 @@ package socketcan
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"runtime"
 	"time"
-	"math/rand"
 
 	"github.com/brutella/can"
 )
@@ -59,9 +59,9 @@ func (l *LinuxListener) Listen(handler func(CANFrame)) error {
 }
 
 func (s *SimListener) Listen(handler func(CANFrame)) error {
-	log.Println("Simulating CAN bus with random data...")
+	log.Println("[CAN] Simulating CAN bus with random dat at 333Hz...")
 
-	ticker := time.NewTicker(100 * time.Millisecond)
+	ticker := time.NewTicker(3 * time.Millisecond)
 	defer ticker.Stop()
 
 	for range ticker.C {

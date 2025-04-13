@@ -11,7 +11,7 @@ import Speedometer from "./Speedometer";
 
 function Dash() {
   const {data, isConnected } = useWebSocket('ws://localhost:8001/');
-  console.log(data)
+  // console.log(data)
   const [charge, setCharge] = useState(100);
   const [draw, setDraw] = useState(0);
   const [speed, setSpeed] = useState(0);

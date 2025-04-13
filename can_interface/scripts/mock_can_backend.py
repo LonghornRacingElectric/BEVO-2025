@@ -18,10 +18,10 @@ os.environ["p_id"] = "0"
 client = mqtt.Client()
 client.connect(MQTT_BROKER, MQTT_PORT, 60)
 
-import requests
-res = requests.get('https://lhrelectric.org/webtool/handshake/')
-print(res.json()['last_packet'])
-os.environ["p_id"] = str(res.json()['last_packet'])
+# import requests
+# res = requests.get('https://lhrelectric.org/webtool/handshake/')
+# print(res.json()['last_packet'])
+# os.environ["p_id"] = str(res.json()['last_packet'])
 
 
 
@@ -58,7 +58,7 @@ async def send_message(websocket):
             data = {
                 "id": msg.arbitration_id,
                 "time_stamp": msg.timestamp,
-                "data": list(msg.data),
+                "data": list([int(100 + random.random() * 50)]),
             }
             can_buffer.append(data)
 
@@ -66,9 +66,9 @@ async def send_message(websocket):
             if now - last_tick >= 0.003:
                 print("sending to server")
                 p_id = int(os.getenv("p_id"))
-                proto.publish_msg(
-                    mqtt_client=client, can_buffer=can_buffer, packet_id=p_id
-                )
+                # proto.publish_msg(
+                #     mqtt_client=client, can_buffer=can_buffer, packet_id=p_id
+                # )
                 os.environ["p_id"] = str(p_id + 1)
                 can_buffer.clear()
                 last_tick = now
