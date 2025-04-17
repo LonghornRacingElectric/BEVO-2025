@@ -9,8 +9,7 @@ def main():
         data=[],
         is_extended_id=False,
         is_fd=True,
-        bitrate_switch=True,
-        error=False
+        bitrate_switch=True
     )
 
     try:
