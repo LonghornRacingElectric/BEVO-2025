@@ -11,7 +11,7 @@ import Speedometer from "./Speedometer";
 
 function Dash() {
   const {data, isConnected } = useWebSocket('ws://localhost:8001/');
-  console.log(data)
+  // console.log(data)
   const [charge, setCharge] = useState(100);
   const [draw, setDraw] = useState(0);
   const [speed, setSpeed] = useState(0);
@@ -24,20 +24,21 @@ function Dash() {
   }, []);
 
   useEffect(() => {
-    if (data?.timestamp !== undefined) {
-      setDraw((data.timestamp / 10) % 100);
+    if (data?.id === 18) {
+      setDraw((data.data[6] / 10) % 100);
     } else {
       setDraw(0);
     }
-  }, [data?.timestamp]);
+  }, [data?.data[6]]);
 
   useEffect(() => {
-    if (data?.id === 224) {
-      setSpeed(data.data[0]);
+    if (data?.id === 18) {
+      // console.log(data.data[6])
+      setSpeed(data.data[6]);
     } else {
       setDraw(0);
     }
-  }, [data?.data[0]]);
+  }, [data?.data[6]]);
 
   return (
     <Container fluid className="Dash">

@@ -22,7 +22,7 @@ CAN_MAPPING = {
     0x114: ("dynamics.frw_speed", lambda d: int.from_bytes(d, 'little') / 100.0),
     0x115: ("dynamics.blw_speed", lambda d: int.from_bytes(d, 'little') / 100.0),
     0x116: ("dynamics.brw_speed", lambda d: int.from_bytes(d, 'little') / 100.0),
-    0x117: ("dynamics.fl_ride_height", lambda d: int.from_bytes(d, 'little') / 100.0),
+    0x012: ("dynamics.fl_ride_height", lambda d: int.from_bytes(d, 'little') / 100.0),
     0x118: ("dynamics.fr_ride_height", lambda d: int.from_bytes(d, 'little') / 100.0),
     0x119: ("dynamics.bl_ride_height", lambda d: int.from_bytes(d, 'little') / 100.0),
     0x11A: ("dynamics.br_ride_height", lambda d: int.from_bytes(d, 'little') / 100.0),

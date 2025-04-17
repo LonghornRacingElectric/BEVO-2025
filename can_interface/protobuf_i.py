@@ -9,23 +9,31 @@ def publish_msg(mqtt_client, can_buffer, packet_id, topic="data"):
     for can_msg in can_buffer:
         can_id = can_msg["id"]
         data = can_msg["data"]
-        if can_id not in CAN_MAPPING:
-            print(f"[WARN] Parse failed for CAN 0x{can_id:X}: {e}")
-            continue
+        # if can_id not in CAN_MAPPING:
+        #     print(f"[WARN] Parse failed for CAN 0x{can_id:X}: {e}")
+        #     continue
 
-        field_path, parser = CAN_MAPPING[can_id]
-        try:
-            value = parser(data)
-        except Exception as e:
-            print(f"[WARN] Parse failed for CAN 0x{can_id:X}: {e}")
-            continue
+        # field_path, parser = CAN_MAPPING[can_id]
+        # try:
+        #     value = parser(data)
+        # except Exception as e:
+        #     print(f"[WARN] Parse failed for CAN 0x{can_id:X}: {e}")
+        #     continue
+        if can_id == 18:
+            print("sending")
+            sensor_msg.dynamics.fl_ride_height = data[6]
+            # print(int.from_bytes(bytes(data[0:2]), "little"))
+            sensor_msg.dynamics.cent_mass_accel[:] = [int.from_bytes(bytes(data[0:2]), "little", signed=True), int.from_bytes(bytes(data[2:4]), "little", signed=True), int.from_bytes(bytes(data[4:6]), "little", signed=True)]
+            
+            print(sensor_msg.dynamics.fl_ride_height)
+            print(sensor_msg.dynamics.cent_mass_accel)
 
         # Set the value in the nested protobuf structure
-        obj = sensor_msg
-        parts = field_path.split('.')
-        for part in parts[:-1]:
-            obj = getattr(obj, part)
-        setattr(obj, parts[-1], value)
+        # obj = sensor_msg
+        # parts = field_path.split('.')
+        # for part in parts[:-1]:
+        #     obj = getattr(obj, part)
+        # setattr(obj, parts[-1], value)
         sensor_msg.time = int(time.time() * 1000)
         sensor_msg.packet_id = packet_id
 
