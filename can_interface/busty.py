@@ -20,9 +20,9 @@ INTERFACE = "can0"
 # CAN ID to send to
 CAN_ID = 0x02
 # Nominal bitrate (ensure this matches the 'ip link' command)
-BITRATE = 500000
+BITRATE = 250000
 # Data bitrate (ensure this matches the 'ip link' command)
-DATA_BITRATE = 2000000
+DATA_BITRATE = 1000000
 
 def main():
     """Creates a CAN FD bus interface, builds and sends the frame."""
@@ -83,27 +83,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-# import can
-
-# def main():
-#     bus = can.interface.Bus(channel='can0', bustype='socketcan')
-
-#     # Send CAN FD frame with BRS and no data
-#     msg = can.Message(
-#         arbitration_id=0x02,
-#         data=[],
-#         is_extended_id=False,
-#         is_fd=True,
-#         bitrate_switch=True
-#     )
-
-#     try:
-#         bus.send(msg)
-#         print("Sent CAN FD frame successfully.")
-#     except can.CanError as e:
-#         print(f"CAN send failed: {e}")
-
-# if __name__ == "__main__":
-#     main()
