@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """
 Sends a single empty CAN FD frame with BRS enabled to ID 0x02 via can0,
-and then attempts to read one incoming frame using the python-can library.
+and then continuously receives and prints incoming frames using the
+python-can library.
+
+Press Ctrl+C to stop the receiver loop.
 
 Make sure the 'can0' interface is up and configured for CAN FD
 before running this script. For example:
@@ -23,26 +26,41 @@ SEND_CAN_ID = 0x02
 BITRATE = 250000
 # Data bitrate (ensure this matches the 'ip link' command)
 DATA_BITRATE = 1000000
-# Timeout for receiving a message (in seconds)
-RECEIVE_TIMEOUT = 1.0
+# Timeout for receiving loop - use None to block indefinitely until message
+# or a small value (e.g., 0.1) to allow periodic checks for KeyboardInterrupt
+# Using None is generally fine for simple listeners.
+RECEIVE_TIMEOUT = None # Or e.g., 1.0
+
+def print_message_details(msg):
+    """Helper function to print details of a received CAN message."""
+    print("-" * 20)
+    print(f"  Timestamp: {msg.timestamp:.6f}") # More precision for timestamp
+    print(f"  ID: 0x{msg.arbitration_id:03X}")
+    print(f"  Is Extended ID: {msg.is_extended_id}")
+    print(f"  Is Remote Frame: {msg.is_remote_frame}") # Added check
+    print(f"  Is Error Frame: {msg.is_error_frame}")   # Added check
+    print(f"  Is FD: {msg.is_fd}")
+    if msg.is_fd:
+        print(f"  BRS: {msg.bitrate_switch}")
+        print(f"  ESI: {msg.error_state_indicator}")
+    print(f"  DLC: {msg.dlc}")
+    # Format data bytes as hex
+    data_hex = ' '.join(f'{b:02X}' for b in msg.data)
+    print(f"  Data: [{data_hex}]")
+    print("-" * 20)
+
 
 def main():
-    """Creates a CAN FD bus interface, sends a frame, and attempts to receive one."""
+    """Creates a CAN FD bus interface, sends a frame, and continuously receives."""
     bus = None  # Initialize bus to None for finally block
     try:
         # --- 1. Create the CAN bus interface ---
-        # bustype='socketcan' specifies the backend
-        # channel='can0' specifies the interface name
-        # fd=True enables CAN FD mode
-        # bitrate and data_bitrate should match the interface configuration
         bus = can.interface.Bus(
             channel=INTERFACE,
             bustype='socketcan',
             fd=True,
             bitrate=BITRATE,
             data_bitrate=DATA_BITRATE
-            # Note: Consider adding receive_own_messages=True if using loopback
-            # and wanting to receive the message just sent.
             # receive_own_messages=False # Default
         )
         print(f"Bus interface created for {INTERFACE} with FD enabled.")
@@ -62,27 +80,24 @@ def main():
         bus.send(message_to_send)
         print(f"Sent CAN FD frame to ID 0x{SEND_CAN_ID:03X}.")
 
-        # --- 4. Attempt to receive a message ---
-        print(f"\nWaiting for a CAN message (timeout: {RECEIVE_TIMEOUT}s)...")
-        # bus.recv blocks until a message is received or timeout occurs
-        received_message = bus.recv(timeout=RECEIVE_TIMEOUT)
+        # --- 4. Continuously receive and print messages ---
+        print(f"\nContinuously receiving CAN messages...")
+        print("Press Ctrl+C to stop.")
+        while True:
+            # bus.recv() blocks until a message is received (or timeout if specified)
+            received_message = bus.recv(timeout=RECEIVE_TIMEOUT)
 
-        if received_message:
-            print("Message received:")
-            print(f"  Timestamp: {received_message.timestamp}")
-            print(f"  ID: 0x{received_message.arbitration_id:03X}")
-            print(f"  Is Extended ID: {received_message.is_extended_id}")
-            print(f"  Is FD: {received_message.is_fd}")
-            if received_message.is_fd:
-                print(f"  BRS: {received_message.bitrate_switch}")
-                print(f"  ESI: {received_message.error_state_indicator}")
-            print(f"  DLC: {received_message.dlc}")
-            # Format data bytes as hex
-            data_hex = ' '.join(f'{b:02X}' for b in received_message.data)
-            print(f"  Data: [{data_hex}]")
-        else:
-            print(f"No message received within the {RECEIVE_TIMEOUT}s timeout.")
+            # If timeout is used, recv() might return None. Skip if no message.
+            if received_message:
+                print_message_details(received_message)
+            # If timeout is None, this 'else' block won't be needed/reached
+            # unless recv() is interrupted in some other way.
+            # else:
+            #    pass # Or print a waiting indicator if using a short timeout
 
+    except KeyboardInterrupt:
+        # Handle Ctrl+C gracefully
+        print("\nReceiver loop stopped by user (Ctrl+C).")
     except can.CanError as e:
         print(f"Error communicating with CAN interface {INTERFACE}: {e}", file=sys.stderr)
         print("Ensure the interface exists, is up, and configured correctly.", file=sys.stderr)
