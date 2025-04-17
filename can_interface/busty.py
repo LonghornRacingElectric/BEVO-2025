@@ -24,7 +24,7 @@ BITRATE = 250000
 # Data bitrate (ensure this matches the 'ip link' command)
 DATA_BITRATE = 1000000
 # Timeout for receiving a message (in seconds)
-RECEIVE_TIMEOUT = 1.0
+RECEIVE_TIMEOUT = 10.0
 
 def main():
     """Creates a CAN FD bus interface, sends a frame, and attempts to receive one."""
