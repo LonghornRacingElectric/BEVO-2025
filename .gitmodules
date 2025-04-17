@@ -1,0 +1,3 @@
+[submodule "longhorn-lib-2025"]
+	path = longhorn-lib-2025
+	url = https://github.com/LonghornRacingElectric/longhorn-lib-2025.git
