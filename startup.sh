@@ -7,7 +7,7 @@ TARGET="google.com"
 cd ~/Documents/BEVO-2025/
 source ./.venv/bin/activate
 
-cvlc BlankBevo.MP4 --fullscreen --play-and-exit
+vlc BlankBevo.MP4
 
 python cell_interface/cell_tools.py
 
