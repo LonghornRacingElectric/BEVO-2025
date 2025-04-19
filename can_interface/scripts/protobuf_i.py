@@ -96,12 +96,11 @@ def get_proto_attrs(data):
             # print(attr["name"], attr["protobuf_attr"], can_field_data)
         if attr["protobuf_attr"]:
             to_send = attr["protobuf_attr"]
-            if(attr["repeated_field_index"]):
-                to_send += "[" + str(attr["repeated_field_index"]) + "]"
-            print(to_send)
+            ind = attr["repeated_field_index"]
             ret.append(
                 (
                     to_send,
+                    ind,
                     proto_typing(attr["proto_type"], can_field_data),
                 )
             )
@@ -120,7 +119,11 @@ def publish_msg(mqtt_client, can_buffer, packet_id, topic="data"):
             # print(can_msg)
             for attr in get_proto_attrs(can_msg):
                 print(attr)
-                setattr(sensor_msg.dynamics, attr[0], attr[1])
+                if not attr[1]:
+                    setattr(sensor_msg.dynamics, attr[0], attr[2])
+                else:
+                    setattr(getattr(sensor_msg.dynamics, attr[2])[attr[1]], attr[0])
+
                 # print(sensor_msg.fr_strain_gauge_v)
     except Exception as e:
         print(e)
