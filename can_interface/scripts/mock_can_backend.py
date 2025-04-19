@@ -32,15 +32,15 @@ def make_can_msg(arbitration_id, value, scale=1.0):
 
 
 test_can_messages = [
-    make_can_msg(1030, 40.0, scale=100.0),  # dynamics.flw_speed = 40.0
-    make_can_msg(1031, 38.0, scale=100.0),  # dynamics.frw_speed = 38.0
-    make_can_msg(1032, 39.0, scale=100.0),  # dynamics.blw_speed = 39.0
-    make_can_msg(1033, 39.5, scale=100.0),  # dynamics.brw_speed = 39.5
-    make_can_msg(1280, 12.5, scale=100.0),  # dynamics.fl_ride_height = 12.5
-    make_can_msg(1281, 13.0, scale=100.0),  # dynamics.fr_ride_height = 13.0
-    make_can_msg(0x11B, 2.5, scale=100.0),  # dynamics.fl_strain_gauge_v = 2.5
-    make_can_msg(0x11C, 2.45, scale=100.0),  # dynamics.fr_strain_gauge_v = 2.45
-    make_can_msg(0x127, 55.0, scale=100.0),  # dynamics.dash_speed = 55.0
+    # make_can_msg(1286,  [65, 0, 182, 255, 191, 255], scale=100.0),  # dynamics.flw_speed = 40.0
+    # make_can_msg(1031, 38.0, scale=100.0),  # dynamics.frw_speed = 38.0
+    # make_can_msg(1032, 39.0, scale=100.0),  # dynamics.blw_speed = 39.0
+    # make_can_msg(1033, 39.5, scale=100.0),  # dynamics.brw_speed = 39.5
+    # make_can_msg(1280, 12.5, scale=100.0),  # dynamics.fl_ride_height = 12.5
+    # make_can_msg(1281, 13.0, scale=100.0),  # dynamics.fr_ride_height = 13.0
+    # make_can_msg(0x11B, 2.5, scale=100.0),  # dynamics.fl_strain_gauge_v = 2.5
+    # make_can_msg(0x11C, 2.45, scale=100.0),  # dynamics.fr_strain_gauge_v = 2.45
+    # make_can_msg(0x127, 55.0, scale=100.0),  # dynamics.dash_speed = 55.0
 ]
 
 
@@ -55,10 +55,14 @@ async def send_message(websocket):
                 test_i = 0
 
             msg = test_can_messages[test_i]
+            # data = {
+            #     "id": msg.arbitration_id,
+            #     "time_stamp": msg.timestamp,
+            #     "data": list(msg.data),
+            # }
             data = {
-                "id": msg.arbitration_id,
-                "time_stamp": msg.timestamp,
-                "data": list(msg.data),
+                "id" : 1286,
+                'data' : bytes([65, 0, 182, 255, 191, 255])
             }
             can_buffer.append(data)
 
