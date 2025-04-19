@@ -6,7 +6,7 @@ import random
 from can_map import CAN_MAPPING
 
 packet_definitions = json.loads(
-    Path("./longhorn-lib-2025/scripts/can_packets.json").read_text()
+    Path("../../longhorn-lib-2025/scripts/can_packets.json").read_text()
 )
 packet_map = {entry["packet_id"]: entry for entry in packet_definitions}
 
