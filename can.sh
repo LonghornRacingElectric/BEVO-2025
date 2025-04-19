@@ -1,5 +1,3 @@
-#!/bin/bash
-
 MAX_RETRIES=10000
 RETRY_DELAY=2
 TARGET="google.com"
