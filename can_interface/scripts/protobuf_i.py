@@ -122,6 +122,7 @@ def publish_msg(mqtt_client, can_buffer, packet_id, topic="data"):
                 if not attr[1]:
                     setattr(sensor_msg.dynamics, attr[0], attr[2])
                 else:
+                    print(getattr(sensor_msg.dynamics, attr[0])[attr[1]])
                     getattr(sensor_msg.dynamics, attr[0])[attr[1]] = attr[2]
 
                 # print(sensor_msg.fr_strain_gauge_v)
