@@ -1,6 +1,6 @@
 #!/bin/bash
 
-MAX_RETRIES=10000
+MAX_RETRIES=200
 RETRY_DELAY=2
 TARGET="google.com"
 
