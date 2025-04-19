@@ -117,13 +117,21 @@ def publish_msg(mqtt_client, can_buffer, packet_id, topic="data"):
     try:
         for can_msg in can_buffer:
             # print(can_msg)
-            for attr in get_proto_attrs(can_msg):
-                print(attr)
-                if not attr[1]:
-                    setattr(sensor_msg.dynamics, attr[0], attr[2])
-                else:
-                    print(getattr(sensor_msg.dynamics, attr[0])[attr[1]])
-                    getattr(sensor_msg.dynamics, attr[0])[attr[1]] = attr[2]
+            # for attr in get_proto_attrs(can_msg):
+            #     print(attr)
+            #     if not attr[1]:
+            #         setattr(sensor_msg.dynamics, attr[0], attr[2])
+            #     else:
+            #         print(getattr(sensor_msg.dynamics, attr[0])[attr[1]])
+            #         getattr(sensor_msg.dynamics, attr[0])[attr[1]] = attr[2]
+            if(can_msg.id == 1030):
+                sensor_msg.dynamics.fl_strain_gauge_v = 0.0002 * int.from_bytes(can_msg.data[2:4], "little", signed=False)
+            if(can_msg.id == 1031):
+                sensor_msg.dynamics.fr_strain_gauge_v = 0.0002 * int.from_bytes(can_msg.data[2:4], "little", signed=False)
+            if(can_msg.id == 1032):
+                sensor_msg.dynamics.bl_strain_gauge_v = 0.0002 * int.from_bytes(can_msg.data[2:4], "little", signed=False)
+            if(can_msg.id == 1033):
+                sensor_msg.dynamics.br_strain_gauge_v = 0.0002 * int.from_bytes(can_msg.data[2:4], "little", signed=False)
 
                 # print(sensor_msg.fr_strain_gauge_v)
     except Exception as e:
