@@ -95,10 +95,13 @@ def get_proto_attrs(data):
             )
             # print(attr["name"], attr["protobuf_attr"], can_field_data)
         if attr["protobuf_attr"]:
+            to_send = attr["proto_type"]
+            if(attr["repeated_field_index"]):
+                to_send += f"[{attr["repeated_field_index"]}]"
             ret.append(
                 (
                     attr["protobuf_attr"],
-                    proto_typing(attr["proto_type"], can_field_data),
+                    proto_typing(to_send, can_field_data),
                 )
             )
     return ret

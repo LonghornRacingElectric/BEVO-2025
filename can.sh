@@ -4,6 +4,10 @@ MAX_RETRIES=200
 RETRY_DELAY=2
 TARGET="google.com"
 
+cd ~/Documents/BEVO-2025/
+source ./.venv/bin/activate
+python cell_interface/cell_tools.py
+
 echo "Waiting for internet (DNS + Ping to $TARGET)..."
 
 for ((i=1; i<=MAX_RETRIES; i++)); do
