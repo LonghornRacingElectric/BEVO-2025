@@ -13,3 +13,5 @@ fi
 
 # Run Python script with argument
 python /home/lhre/Documents/BEVO-2025/celld/celld.py on
+
+mpv --fs --no-terminal ../startup.MP4
