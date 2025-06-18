@@ -44,5 +44,5 @@ CAN_MAPPING = {
     0x12B: ("dynamics.b_gps_velocity", lambda d: int.from_bytes(d, 'little') / 100.0),
     0x12C: ("dynamics.f_gps_heading", lambda d: int.from_bytes(d, 'little') / 100.0),
     0x12D: ("dynamics.b_gps_heading", lambda d: int.from_bytes(d, 'little') / 100.0),
-    0x6CA: ("diagnosticsLow.shutdown_leg1", lambda d: bool(d[2]) if len(d) > 2 else False)
+    0x6CA: ("diagnosticsLow.shutdown_leg1", lambda d: bool(d[0]) if len(d) > 0 else False)
 }
