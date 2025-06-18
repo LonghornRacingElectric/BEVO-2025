@@ -20,6 +20,19 @@ h = lgpio.gpiochip_open(CHIP)
 lgpio.gpio_claim_output(h, FULL_CARD_POWER_OFF, 0)  # Default LOW
 
 
+def check_module_status():
+    """Check if the cellular module is currently powered on"""
+    try:
+        current_state = lgpio.gpio_read(h, FULL_CARD_POWER_OFF)
+        if current_state == 1:
+            return True, "Cellular module is currently powered ON"
+        else:
+            return False, "Cellular module is currently powered OFF"
+    except Exception as e:
+        print(f"Error checking module status: {e}")
+        return None, f"Error checking status: {e}"
+
+
 def shutdown_module():
     ser = serial.Serial(port=PORT, baudrate=BAUDRATE, timeout=1)
     try:
@@ -50,16 +63,27 @@ def power_on_module():
 
 def main():
     parser = argparse.ArgumentParser(description='Control cellular module power')
-    parser.add_argument('action', choices=['on', 'off'], 
-                       help='Action to perform: "on" to power on, "off" to power off')
+    parser.add_argument('action', choices=['on', 'off', 'status'], 
+                       help='Action to perform: "on" to power on, "off" to power off, "status" to check current state')
     
     args = parser.parse_args()
     
     try:
-        if args.action == 'on':
-            power_on_module()
+        if args.action == 'status':
+            is_on, status_msg = check_module_status()
+            print(status_msg)
+        elif args.action == 'on':
+            is_on, status_msg = check_module_status()
+            if is_on:
+                print("Cellular module is already powered ON")
+            else:
+                power_on_module()
         elif args.action == 'off':
-            shutdown_module()
+            is_on, status_msg = check_module_status()
+            if not is_on:
+                print("Cellular module is already powered OFF")
+            else:
+                shutdown_module()
     except KeyboardInterrupt:
         print("\nOperation cancelled by user")
         sys.exit(1)
