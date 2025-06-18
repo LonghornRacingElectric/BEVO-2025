@@ -16,6 +16,7 @@ import os
 os.environ["p_id"] = "0"
 
 # Initialize MQTT client with error handling
+global mqtt_connected, client
 mqtt_connected = False
 client = None
 
@@ -54,6 +55,8 @@ except Exception as e:
 
 async def process_can_messages():
     """Process CAN messages independently of WebSocket connections"""
+    global mqtt_connected, client
+    
     bus = can.interface.Bus(bustype="socketcan", channel="can0", bitrate=1000000)
     last_can_time = 0
     
