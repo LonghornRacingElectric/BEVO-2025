@@ -1,6 +1,8 @@
 import serial
 import lgpio
 import time
+import argparse
+import sys
 
 # Serial Defines
 PORT = "/dev/ttyUSB2"
@@ -27,6 +29,7 @@ def shutdown_module():
         if response == b"OK":
             lgpio.gpio_write(h, FULL_CARD_POWER_OFF, 0)  # Set pin LOW
             time.sleep(1)
+            print("Cellular module powered OFF successfully")
         else:
             print("Module Shutdown Failed")
 
@@ -39,17 +42,32 @@ def shutdown_module():
 def power_on_module():
     try:
         lgpio.gpio_write(h, FULL_CARD_POWER_OFF, 1)  # Set pin HIGH
+        time.sleep(1)
+        print("Cellular module powered ON successfully")
     except Exception as e:
         print(f"UNEXPECTED POWER_ON ERROR: {e}")
 
 
 def main():
-    # power_on_module()
-    # try:
-    #     power_on_module()
-    # finally:
-    shutdown_module()
-    lgpio.gpiochip_close(h)  # Cleanup GPIO
+    parser = argparse.ArgumentParser(description='Control cellular module power')
+    parser.add_argument('action', choices=['on', 'off'], 
+                       help='Action to perform: "on" to power on, "off" to power off')
+    
+    args = parser.parse_args()
+    
+    try:
+        if args.action == 'on':
+            power_on_module()
+        elif args.action == 'off':
+            shutdown_module()
+    except KeyboardInterrupt:
+        print("\nOperation cancelled by user")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+    finally:
+        lgpio.gpiochip_close(h)  # Cleanup GPIO
 
 
 if __name__ == "__main__":

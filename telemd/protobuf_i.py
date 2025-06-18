@@ -32,6 +32,6 @@ def publish_msg(mqtt_client, can_buffer, packet_id, topic="data"):
     try:
         payload = sensor_msg.SerializeToString()
         mqtt_client.publish(topic, payload)
-        # print(f"[MQTT] Published {len(payload)} bytes to {topic}")
+        print(f"[MQTT] Published {(sensor_msg)} to {topic}")
     except Exception as e:
         print(f"[ERROR] Failed to publish: {e}")
