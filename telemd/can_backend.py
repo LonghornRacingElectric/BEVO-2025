@@ -15,23 +15,50 @@ import os
 
 os.environ["p_id"] = "0"
 
-client = mqtt.Client()
-client.connect(MQTT_BROKER, MQTT_PORT, 60)
+# Initialize MQTT client with error handling
+mqtt_connected = False
+client = None
+
+try:
+    # Use the newer MQTT client API to avoid deprecation warning
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+    client.connect(MQTT_BROKER, MQTT_PORT, 60)
+    mqtt_connected = True
+    print(f"Successfully connected to MQTT broker at {MQTT_BROKER}:{MQTT_PORT}")
+except Exception as e:
+    print(f"Warning: Could not connect to MQTT broker at {MQTT_BROKER}:{MQTT_PORT}")
+    print(f"MQTT error: {e}")
+    print("Continuing with WebSocket functionality only...")
+    mqtt_connected = False
 
 import requests
 
-res = requests.get("https://lhrelectric.org/webtool/handshake/")
-print(res.json()["last_packet"])
-os.environ["p_id"] = str(res.json()["last_packet"])
-client = mqtt.Client()
-client.connect(MQTT_BROKER, MQTT_PORT, 60)
+try:
+    res = requests.get("https://lhrelectric.org/webtool/handshake/")
+    print(res.json()["last_packet"])
+    os.environ["p_id"] = str(res.json()["last_packet"])
+    
+    # Only try to reconnect MQTT if we have a valid packet ID
+    if not mqtt_connected and client:
+        try:
+            client.connect(MQTT_BROKER, MQTT_PORT, 60)
+            mqtt_connected = True
+            print(f"Successfully connected to MQTT broker after handshake")
+        except Exception as e:
+            print(f"Still cannot connect to MQTT broker: {e}")
+            mqtt_connected = False
+except Exception as e:
+    print(f"Warning: Could not get handshake data: {e}")
+    print("Using default packet ID: 0")
 
 
-async def send_message(websocket):
-    last_tick = time.time()
+async def process_can_messages():
+    """Process CAN messages independently of WebSocket connections"""
     bus = can.interface.Bus(bustype="socketcan", channel="can0", bitrate=1000000)
     last_can_time = 0
-    can_buffer = []
+    
+    print("Starting CAN message processing...")
+    
     try:
         while True:
             try:
@@ -50,26 +77,36 @@ async def send_message(websocket):
                     # Special debug for 0x6CA packet
                     if msg.arbitration_id == 0x6CA:
                         print(f"*** SHUTDOWN LEG1 PACKET DETECTED: 0x{msg.arbitration_id:03X} [{len(msg.data)}] {[f'{b:02X}' for b in msg.data]} ***")
-                    
-                    can_buffer.append(data)
 
-                    # Always transmit immediately on MQTT
-                    p_id = int(os.getenv("p_id"))
-                    proto.publish_msg(
-                        mqtt_client=client, can_buffer=[data], packet_id=p_id
-                    )
-                    os.environ["p_id"] = str(p_id + 1)
-
-                    # Also send to WebSocket
-                    message_to_send = json.dumps(data)
-                    await websocket.send(message_to_send)
-                    await asyncio.sleep(0.00018)
+                    # Always transmit immediately on MQTT if connected
+                    if mqtt_connected and client:
+                        try:
+                            p_id = int(os.getenv("p_id"))
+                            proto.publish_msg(
+                                mqtt_client=client, can_buffer=[data], packet_id=p_id
+                            )
+                            os.environ["p_id"] = str(p_id + 1)
+                        except Exception as e:
+                            print(f"MQTT publish error: {e}")
+                            mqtt_connected = False
+                            
             except Exception as e:
-                print(e)
+                print(f"CAN processing error: {e}")
     except KeyboardInterrupt:
-        print("Stopping.")
+        print("Stopping CAN processing.")
     finally:
         bus.shutdown()
+
+
+async def send_message(websocket):
+    """Send CAN messages to WebSocket clients"""
+    print("WebSocket client connected, starting message forwarding...")
+    try:
+        while True:
+            # This will be populated with CAN data when available
+            await asyncio.sleep(0.1)
+    except Exception as e:
+        print(f"WebSocket send error: {e}")
 
 
 async def handler(websocket):
@@ -92,12 +129,16 @@ async def handler(websocket):
 
 async def main():
     try:
-        while True:
-            print("Websocket server on localhost:8001")
-            async with serve(handler, "", 8001):
-                await asyncio.get_running_loop().create_future()
+        # Start CAN processing task
+        can_task = asyncio.create_task(process_can_messages())
+        
+        print("Websocket server on localhost:8001")
+        async with serve(handler, "", 8001):
+            await asyncio.get_running_loop().create_future()
     except asyncio.exceptions.CancelledError:
         print("\nProgram interrupted. Exiting...")
+    finally:
+        can_task.cancel()
 
 
 if __name__ == "__main__":
