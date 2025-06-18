@@ -24,6 +24,7 @@ def check_module_status():
     """Check if the cellular module is currently powered on"""
     try:
         current_state = lgpio.gpio_read(h, FULL_CARD_POWER_OFF)
+        print(f"DEBUG: GPIO pin {FULL_CARD_POWER_OFF} current state: {current_state}")
         if current_state == 1:
             return True, "Cellular module is currently powered ON"
         else:
