@@ -16,8 +16,8 @@ CHIP = 0  # Default GPIO chip on Raspberry Pi 5
 h = lgpio.gpiochip_open(CHIP)
 
 def check_module_status():
-    """Check if the cellular module is currently powered on"""
     try:
+        lgpio.gpio_claim_input(h, FULL_CARD_POWER_OFF)
         current_state = lgpio.gpio_read(h, FULL_CARD_POWER_OFF)
         print(f"DEBUG: GPIO pin {FULL_CARD_POWER_OFF} current state: {current_state}")
         if current_state == 1:
@@ -27,6 +27,7 @@ def check_module_status():
     except Exception as e:
         print(f"Error checking module status: {e}")
         return None, f"Error checking status: {e}"
+
 
 def shutdown_module():
     try:
