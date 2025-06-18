@@ -43,7 +43,14 @@ async def send_message(websocket):
                         "timestamp": msg.timestamp,
                         "data": list(msg.data),
                     }
-                    print(data)
+                    
+                    # Debug print for all CAN packets
+                    print(f"CAN Packet: 0x{msg.arbitration_id:03X} [{len(msg.data)}] {[f'{b:02X}' for b in msg.data]}")
+                    
+                    # Special debug for 0x6CA packet
+                    if msg.arbitration_id == 0x6CA:
+                        print(f"*** SHUTDOWN LEG1 PACKET DETECTED: 0x{msg.arbitration_id:03X} [{len(msg.data)}] {[f'{b:02X}' for b in msg.data]} ***")
+                    
                     can_buffer.append(data)
 
                     # Always transmit immediately on MQTT
