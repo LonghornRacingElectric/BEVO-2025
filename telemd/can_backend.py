@@ -76,22 +76,22 @@ async def process_can_messages():
                     
                     # Debug print for all CAN packets
                     print(f"CAN Packet: 0x{msg.arbitration_id:03X} [{len(msg.data)}] {[f'{b:02X}' for b in msg.data]}")
-                    
-                    # Special debug for 0x6CA packet
-                    if msg.arbitration_id == 0x6CA:
-                        print(f"*** SHUTDOWN LEG1 PACKET DETECTED: 0x{msg.arbitration_id:03X} [{len(msg.data)}] {[f'{b:02X}' for b in msg.data]} ***")
 
                     # Always transmit immediately on MQTT if connected
                     if mqtt_connected and client:
                         try:
                             p_id = int(os.getenv("p_id"))
+                            print(f"Attempting to publish CAN 0x{msg.arbitration_id:03X} with packet_id {p_id}")
                             proto.publish_msg(
                                 mqtt_client=client, can_buffer=[data], packet_id=p_id
                             )
                             os.environ["p_id"] = str(p_id + 1)
+                            print(f"Successfully published CAN 0x{msg.arbitration_id:03X}")
                         except Exception as e:
                             print(f"MQTT publish error: {e}")
                             mqtt_connected = False
+                    else:
+                        print(f"MQTT not connected, skipping publish for CAN 0x{msg.arbitration_id:03X}")
                             
             except Exception as e:
                 print(f"CAN processing error: {e}")
