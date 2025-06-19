@@ -1,7 +1,7 @@
-import template_pb2 as pb
+from . import generated as pb
 import time
 import random
-from can_map import CAN_MAPPING
+from core.field_mappings import CAN_MAPPING
 
 
 def publish_msg(mqtt_client, can_buffer, packet_id, topic="data"):

@@ -15,3 +15,6 @@ fi
 python /home/lhre/Documents/BEVO-2025/celld/celld.py on
 
 mpv --fs --no-terminal --no-loop ../startup.MP4
+
+cd /etc/openvpn/client/
+sudo openvpn --config client.ovpn
