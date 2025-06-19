@@ -1,123 +1,179 @@
 import asyncio
-import json
-import os
-import time
 from websockets import serve
 from websockets.exceptions import ConnectionClosedOK
+import time
+import os
+import json
 
-# Modular components
+# Import our modular components
 from interfaces.interface import CANInterface
 from networking.client import MQTTManager, TelemetryCache
 from data_logging.logger import CSVTimeSeriesLogger, LatestValuesCache
 from core.field_mappings import CAN_MAPPING
 
 # Configuration
-MQTT_PUBLISH_RATE = 0.1  # Hz
-MQTT_PUBLISH_INTERVAL = 1.0 / MQTT_PUBLISH_RATE
+MQTT_PUBLISH_RATE = 0.0000001  # Hz
+MQTT_PUBLISH_INTERVAL = 1.0 / MQTT_PUBLISH_RATE  # ~100ms
 
 os.environ["p_id"] = "0"
 
 
-async def process_can_messages(latest_values):
-    """Process CAN messages and update caches."""
+async def process_can_messages(latest_values_cache):
+    """Process CAN messages independently of WebSocket connections"""
+    # Initialize components
     can_interface = CANInterface()
     mqtt_manager = MQTTManager()
     telemetry_cache = TelemetryCache(mqtt_manager, MQTT_PUBLISH_INTERVAL)
     time_series_logger = CSVTimeSeriesLogger()
-
+    
+    # Initialize connections
     can_interface.initialize()
     mqtt_manager.initialize()
-    mqtt_manager.get_packet_id()
-
-    print(f"[CAN] Listening with MQTT rate {MQTT_PUBLISH_RATE} Hz")
-
+    mqtt_manager.get_packet_id()  # Get initial packet ID
+    
+    # print(
+    #     f"Starting CAN message processing with {MQTT_PUBLISH_RATE}Hz MQTT publishing..."
+    # )
+    
     try:
         while True:
-            msg = can_interface.recv(timeout=0.01)
-            now = time.time()
-
-            if msg:
-                can_id = msg.arbitration_id
-                if can_id in CAN_MAPPING:
-                    mapping = CAN_MAPPING[can_id]
-                    if isinstance(mapping, tuple):
-                        mapping = [mapping]
-
-                    for field_name, converter in mapping:
-                        try:
-                            value = converter(msg.data)
-                            latest_values.update_value(field_name, value)
-                            telemetry_cache.update_value(can_id, field_name, value)
-                            time_series_logger.log_value(field_name, value, now)
-                        except Exception as e:
-                            print(f"[Error] {field_name}: {e}")
+            try:
+                msg_or_msgs = can_interface.recv(timeout=0.01)
+                current_time = time.time()
+                
+                if msg_or_msgs:
+                    # Handle both single message and list of messages
+                    messages = msg_or_msgs if isinstance(msg_or_msgs, list) else [msg_or_msgs]
+                    
+                    for msg in messages:
+                        # Process CAN message with direct lookup
+                        can_id = msg.arbitration_id
+                        # print(f"  -> Received CAN 0x{can_id:03X}: {[f'{b:02X}' for b in msg.data]}")
+                        
+                        if can_id in CAN_MAPPING:
+                            mapping = CAN_MAPPING[can_id]
+                            
+                            # Normalize mapping to always be a list of tuples
+                            if isinstance(mapping, tuple):
+                                mapping = [mapping]
+                            
+                            try:
+                                for field_name, converter in mapping:
+                                    try:
+                                        value = converter(msg.data)
+                                        latest_values_cache.update_value(field_name, value)
+                                        telemetry_cache.update_value(can_id, field_name, value)
+                                        time_series_logger.log_value(field_name, value, current_time)
+                                        # print(f"  -> Logged {field_name}: {value}")
+                                    except Exception as e:
+                                        print(f"  -> Error converting {field_name} from CAN 0x{can_id:03X}: {e}")
+                                        print(f"  -> Data bytes: {[f'{b:02X}' for b in msg.data]}")
+                            except Exception as e:
+                                print(f"  -> Error processing CAN 0x{can_id:03X}: {e}")
+                                print(f"  -> Data bytes: {[f'{b:02X}' for b in msg.data]}")
+                        else:
+                            print(f"  -> No mapping found for CAN ID 0x{can_id:03X}")
                 else:
-                    print(f"[CAN] Unknown ID: 0x{can_id:03X}")
-
-            # Periodic MQTT publish
-            if telemetry_cache.should_publish(now):
-                telemetry_cache.publish_cached_data(now)
-
-    except Exception as e:
-        print(f"[CAN Loop Error] {e}")
-    finally:
-        print("[CAN] Shutting down...")
+                    # Print a message every 10 seconds to show the system is running
+                    if int(current_time) % 10 == 0 and int(current_time) != int(time.time() - 0.01):
+                        print("Waiting for CAN messages...")
+                
+                # Check if it's time to publish cached data to MQTT
+                if telemetry_cache.should_publish(current_time):
+                    telemetry_cache.publish_cached_data(current_time)
+                
+                # Print summary every 5 seconds
+                if current_time - latest_values_cache.last_update_time >= 5.0:
+                    latest_values_cache.print_summary()
+                    latest_values_cache.last_update_time = current_time
+                
+                # Small delay to prevent blocking the event loop
+                await asyncio.sleep(0.001)
+            except Exception as e:
+                print(f"CAN processing error: {e}")
+    except KeyboardInterrupt:
+        print("Stopping CAN processing.")
+        # Print final summary and shutdown
+        latest_values_cache.print_summary()
+        telemetry_cache.publish_cached_data(time.time())
         time_series_logger.shutdown()
+    finally:
+        print("Shutting down CAN processing components...")
+        time_series_logger.shutdown()  # Ensure CSV logger flushes its buffer
         can_interface.shutdown()
         mqtt_manager.shutdown()
 
 
-async def send_message(websocket, latest_values):
-    """Send latest telemetry values over WebSocket at ~30Hz."""
-    print("[WebSocket] Client connected")
+async def send_message(websocket, latest_values_cache):
+    """Send telemetry updates to WebSocket clients"""
+    print("WebSocket client connected, sending telemetry updates...")
     try:
         while True:
-            data = latest_values.get_latest_values()
-            if data:
+            # Get latest values from cache
+            latest_values = latest_values_cache.get_latest_values()
+            
+            if latest_values:
+                # Organize values by category (dynamics, controls, etc.)
+                organized_data = {}
+                for field_name, (value, timestamp) in latest_values.items():
+                    # Split field name by dot to get category and subfield
+                    parts = field_name.split('.')
+                    if len(parts) >= 2:
+                        category = parts[0]
+                        subfield = '.'.join(parts[1:])
+                        if category not in organized_data:
+                            organized_data[category] = {}
+                        organized_data[category][subfield] = value
+                
+                # Create telemetry update message
                 message = {
                     "timestamp": time.time(),
                     "type": "telemetry_update",
-                    "data": data,
+                    "data": organized_data
                 }
+                
+                # Send to WebSocket client
                 await websocket.send(json.dumps(message))
-            await asyncio.sleep(1 / 30.0)  # 30Hz
+            
+            # Send updates at 30Hz (every 33.33ms)
+            await asyncio.sleep(0.033)
     except Exception as e:
-        print(f"[WebSocket Send Error] {e}")
+        print(f"WebSocket send error: {e}")
 
 
-async def websocket_handler(websocket, latest_values):
-    send_task = asyncio.create_task(send_message(websocket, latest_values))
+async def handler(websocket, latest_values_cache):
+    print("client connected")
+    send_task = asyncio.create_task(send_message(websocket, latest_values_cache))
+
     try:
         while True:
             try:
                 message = await websocket.recv()
-                print(f"[WebSocket] Received: {message}")
+                print(f"Received from client: {message}")
             except ConnectionClosedOK:
-                print("[WebSocket] Client disconnected")
+                print("ConnectionClosedOK")
                 break
-    finally:
-        send_task.cancel()
+    except KeyboardInterrupt:
+        print("\n")
+
+    send_task.cancel()  # stop sending task
 
 
 async def main():
-    latest_values = LatestValuesCache()
-
-    # Start CAN processing
-    can_task = asyncio.create_task(process_can_messages(latest_values))
-
-    # Start WebSocket server with closure over `latest_values`
-    async def ws_handler(ws):
-        await websocket_handler(ws, latest_values)
-
-    print("[Main] WebSocket server on ws://localhost:8001")
-    async with serve(ws_handler, "", 8001):
-        try:
-            await asyncio.Future()  # run forever
-        except asyncio.CancelledError:
-            print("[Main] Shutdown requested")
-
-    can_task.cancel()
-    await can_task
+    try:
+        # Initialize components for WebSocket
+        latest_values = LatestValuesCache()
+        
+        # Start CAN processing task
+        can_task = asyncio.create_task(process_can_messages(latest_values))
+        
+        print("Websocket server on localhost:8001")
+        async with serve(lambda ws: handler(ws, latest_values), "", 8001):
+            await asyncio.get_running_loop().create_future()
+    except asyncio.exceptions.CancelledError:
+        print("\nProgram interrupted. Exiting...")
+    finally:
+        can_task.cancel()
 
 
 if __name__ == "__main__":

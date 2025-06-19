@@ -1,112 +1,123 @@
+# Safe conversion function to handle conversion errors
+def safe_int_from_bytes(data, start, end, signed=False, scale=1.0, fallback=0.0):
+    """Safely convert bytes to integer with error handling"""
+    try:
+        if start >= len(data) or end > len(data):
+            return fallback
+        value = int.from_bytes(data[start:end], 'little', signed=signed)
+        return value * scale
+    except (ValueError, OverflowError, IndexError):
+        return fallback
+
 #define lambdas outside to avoid recompliations
 CAN_MAPPING = {
     # Dynamics - Steering and angles
-    0xA05: ("dynamics.steer_col_angle", lambda d: int.from_bytes(d[0:2], 'little', signed=True) * 0.004),
-    0x400: ("dynamics.fl_steer_angle", lambda d: int.from_bytes(d[0:2], 'little', signed=True) * 0.001),
-    0x401: ("dynamics.fr_steer_angle", lambda d: int.from_bytes(d[0:2], 'little', signed=True) * 0.001),
+    0xA05: ("dynamics.steer_col_angle", lambda d: safe_int_from_bytes(d, 0, 2, signed=True, scale=0.004)),
+    0x400: ("dynamics.fl_steer_angle", lambda d: safe_int_from_bytes(d, 0, 2, signed=True, scale=0.001)),
+    0x401: ("dynamics.fr_steer_angle", lambda d: safe_int_from_bytes(d, 0, 2, signed=True, scale=0.001)),
     
     # Dynamics - Wheel data (multiple fields per CAN ID)
     0x406: [
-        ("dynamics.flw_speed", lambda d: int.from_bytes(d[0:2], 'little', signed=True) * 0.01),
-        ("dynamics.fl_strain_gauge_v", lambda d: int.from_bytes(d[2:4], 'little', signed=True) * 0.0002),
-        ("dynamics.fl_pushrod_stress", lambda d: int.from_bytes(d[4:6], 'little', signed=True) * 0.5),
-        ("dynamics.fl_spring_displace", lambda d: int.from_bytes(d[6:8], 'little') * 0.001),
+        ("dynamics.flw_speed", lambda d: safe_int_from_bytes(d, 0, 2, signed=True, scale=0.01)),
+        ("dynamics.fl_strain_gauge_v", lambda d: safe_int_from_bytes(d, 2, 4, signed=True, scale=0.0002)),
+        ("dynamics.fl_pushrod_stress", lambda d: safe_int_from_bytes(d, 4, 6, signed=True, scale=0.5)),
+        ("dynamics.fl_spring_displace", lambda d: safe_int_from_bytes(d, 6, 8, signed=False, scale=0.001)),
     ],
     0x407: [
-        ("dynamics.frw_speed", lambda d: int.from_bytes(d[0:2], 'little', signed=True) * 0.01),
-        ("dynamics.fr_strain_gauge_v", lambda d: int.from_bytes(d[2:4], 'little', signed=True) * 0.0002),
-        ("dynamics.fr_pushrod_stress", lambda d: int.from_bytes(d[4:6], 'little', signed=True) * 0.5),
-        ("dynamics.fr_spring_displace", lambda d: int.from_bytes(d[6:8], 'little') * 0.001),
+        ("dynamics.frw_speed", lambda d: safe_int_from_bytes(d, 0, 2, signed=True, scale=0.01)),
+        ("dynamics.fr_strain_gauge_v", lambda d: safe_int_from_bytes(d, 2, 4, signed=True, scale=0.0002)),
+        ("dynamics.fr_pushrod_stress", lambda d: safe_int_from_bytes(d, 4, 6, signed=True, scale=0.5)),
+        ("dynamics.fr_spring_displace", lambda d: safe_int_from_bytes(d, 6, 8, signed=False, scale=0.001)),
     ],
     0x408: [
-        ("dynamics.blw_speed", lambda d: int.from_bytes(d[0:2], 'little', signed=True) * 0.01),
-        ("dynamics.bl_strain_gauge_v", lambda d: int.from_bytes(d[2:4], 'little', signed=True) * 0.0002),
-        ("dynamics.bl_pushrod_stress", lambda d: int.from_bytes(d[4:6], 'little', signed=True) * 0.5),
-        ("dynamics.bl_spring_displace", lambda d: int.from_bytes(d[6:8], 'little') * 0.001),
+        ("dynamics.blw_speed", lambda d: safe_int_from_bytes(d, 0, 2, signed=True, scale=0.01)),
+        ("dynamics.bl_strain_gauge_v", lambda d: safe_int_from_bytes(d, 2, 4, signed=True, scale=0.0002)),
+        ("dynamics.bl_pushrod_stress", lambda d: safe_int_from_bytes(d, 4, 6, signed=True, scale=0.5)),
+        ("dynamics.bl_spring_displace", lambda d: safe_int_from_bytes(d, 6, 8, signed=False, scale=0.001)),
     ],
     0x409: [
-        ("dynamics.brw_speed", lambda d: int.from_bytes(d[0:2], 'little', signed=True) * 0.01),
-        ("dynamics.br_strain_gauge_v", lambda d: int.from_bytes(d[2:4], 'little', signed=True) * 0.0002),
-        ("dynamics.br_pushrod_stress", lambda d: int.from_bytes(d[4:6], 'little', signed=True) * 0.5),
-        ("dynamics.br_spring_displace", lambda d: int.from_bytes(d[6:8], 'little') * 0.001),
+        ("dynamics.brw_speed", lambda d: safe_int_from_bytes(d, 0, 2, signed=True, scale=0.01)),
+        ("dynamics.br_strain_gauge_v", lambda d: safe_int_from_bytes(d, 2, 4, signed=True, scale=0.0002)),
+        ("dynamics.br_pushrod_stress", lambda d: safe_int_from_bytes(d, 4, 6, signed=True, scale=0.5)),
+        ("dynamics.br_spring_displace", lambda d: safe_int_from_bytes(d, 6, 8, signed=False, scale=0.001)),
     ],
     
     # Dynamics - Sprung mass data (multiple fields per CAN ID)
     0x500: [
-        ("dynamics.fl_ride_height", lambda d: int.from_bytes(d[6:8], 'little') * 0.002),
+        ("dynamics.fl_ride_height", lambda d: safe_int_from_bytes(d, 6, 8, signed=False, scale=0.002)),
         ("dynamics.fl_sprung_accel", lambda d: [
-            int.from_bytes(d[0:2], 'little', signed=True) * 0.001,
-            int.from_bytes(d[2:4], 'little', signed=True) * 0.001,
-            int.from_bytes(d[4:6], 'little', signed=True) * 0.001
+            safe_int_from_bytes(d, 0, 2, signed=True, scale=0.001),
+            safe_int_from_bytes(d, 2, 4, signed=True, scale=0.001),
+            safe_int_from_bytes(d, 4, 6, signed=True, scale=0.001)
         ]),
     ],
     0x501: [
-        ("dynamics.fr_ride_height", lambda d: int.from_bytes(d[6:8], 'little') * 0.002),
+        ("dynamics.fr_ride_height", lambda d: safe_int_from_bytes(d, 6, 8, signed=False, scale=0.002)),
         ("dynamics.fr_sprung_accel", lambda d: [
-            int.from_bytes(d[0:2], 'little', signed=True) * 0.001,
-            int.from_bytes(d[2:4], 'little', signed=True) * 0.001,
-            int.from_bytes(d[4:6], 'little', signed=True) * 0.001
+            safe_int_from_bytes(d, 0, 2, signed=True, scale=0.001),
+            safe_int_from_bytes(d, 2, 4, signed=True, scale=0.001),
+            safe_int_from_bytes(d, 4, 6, signed=True, scale=0.001)
         ]),
     ],
     0x502: [
-        ("dynamics.bl_ride_height", lambda d: int.from_bytes(d[6:8], 'little') * 0.002),
+        ("dynamics.bl_ride_height", lambda d: safe_int_from_bytes(d, 6, 8, signed=False, scale=0.002)),
         ("dynamics.bl_sprung_accel", lambda d: [
-            int.from_bytes(d[0:2], 'little', signed=True) * 0.001,
-            int.from_bytes(d[2:4], 'little', signed=True) * 0.001,
-            int.from_bytes(d[4:6], 'little', signed=True) * 0.001
+            safe_int_from_bytes(d, 0, 2, signed=True, scale=0.001),
+            safe_int_from_bytes(d, 2, 4, signed=True, scale=0.001),
+            safe_int_from_bytes(d, 4, 6, signed=True, scale=0.001)
         ]),
     ],
     0x503: [
-        ("dynamics.br_ride_height", lambda d: int.from_bytes(d[6:8], 'little') * 0.002),
+        ("dynamics.br_ride_height", lambda d: safe_int_from_bytes(d, 6, 8, signed=False, scale=0.002)),
         ("dynamics.br_sprung_accel", lambda d: [
-            int.from_bytes(d[0:2], 'little', signed=True) * 0.001,
-            int.from_bytes(d[2:4], 'little', signed=True) * 0.001,
-            int.from_bytes(d[4:6], 'little', signed=True) * 0.001
+            safe_int_from_bytes(d, 0, 2, signed=True, scale=0.001),
+            safe_int_from_bytes(d, 2, 4, signed=True, scale=0.001),
+            safe_int_from_bytes(d, 4, 6, signed=True, scale=0.001)
         ]),
     ],
     
     # Dynamics - Unsprung acceleration vectors (3D)
     0x402: ("dynamics.fl_unsprung_accel", lambda d: [
-        int.from_bytes(d[0:2], 'little', signed=True) * 0.001,
-        int.from_bytes(d[2:4], 'little', signed=True) * 0.001,
-        int.from_bytes(d[4:6], 'little', signed=True) * 0.001
+        safe_int_from_bytes(d, 0, 2, signed=True, scale=0.001),
+        safe_int_from_bytes(d, 2, 4, signed=True, scale=0.001),
+        safe_int_from_bytes(d, 4, 6, signed=True, scale=0.001)
     ]),
     0x403: ("dynamics.fr_unsprung_accel", lambda d: [
-        int.from_bytes(d[0:2], 'little', signed=True) * 0.001,
-        int.from_bytes(d[2:4], 'little', signed=True) * 0.001,
-        int.from_bytes(d[4:6], 'little', signed=True) * 0.001
+        safe_int_from_bytes(d, 0, 2, signed=True, scale=0.001),
+        safe_int_from_bytes(d, 2, 4, signed=True, scale=0.001),
+        safe_int_from_bytes(d, 4, 6, signed=True, scale=0.001)
     ]),
     0x404: ("dynamics.bl_unsprung_accel", lambda d: [
-        int.from_bytes(d[0:2], 'little', signed=True) * 0.001,
-        int.from_bytes(d[2:4], 'little', signed=True) * 0.001,
-        int.from_bytes(d[4:6], 'little', signed=True) * 0.001
+        safe_int_from_bytes(d, 0, 2, signed=True, scale=0.001),
+        safe_int_from_bytes(d, 2, 4, signed=True, scale=0.001),
+        safe_int_from_bytes(d, 4, 6, signed=True, scale=0.001)
     ]),
     0x405: ("dynamics.br_unsprung_accel", lambda d: [
-        int.from_bytes(d[0:2], 'little', signed=True) * 0.001,
-        int.from_bytes(d[2:4], 'little', signed=True) * 0.001,
-        int.from_bytes(d[4:6], 'little', signed=True) * 0.001
+        safe_int_from_bytes(d, 0, 2, signed=True, scale=0.001),
+        safe_int_from_bytes(d, 2, 4, signed=True, scale=0.001),
+        safe_int_from_bytes(d, 4, 6, signed=True, scale=0.001)
     ]),
     
     # Dynamics - Angular rate vectors (3D)
     0x504: ("dynamics.fl_sprung_ang_rate", lambda d: [
-        int.from_bytes(d[0:2], 'little', signed=True) * 0.03,
-        int.from_bytes(d[2:4], 'little', signed=True) * 0.03,
-        int.from_bytes(d[4:6], 'little', signed=True) * 0.03
+        safe_int_from_bytes(d, 0, 2, signed=True, scale=0.03),
+        safe_int_from_bytes(d, 2, 4, signed=True, scale=0.03),
+        safe_int_from_bytes(d, 4, 6, signed=True, scale=0.03)
     ]),
     0x505: ("dynamics.fr_sprung_ang_rate", lambda d: [
-        int.from_bytes(d[0:2], 'little', signed=True) * 0.03,
-        int.from_bytes(d[2:4], 'little', signed=True) * 0.03,
-        int.from_bytes(d[4:6], 'little', signed=True) * 0.03
+        safe_int_from_bytes(d, 0, 2, signed=True, scale=0.03),
+        safe_int_from_bytes(d, 2, 4, signed=True, scale=0.03),
+        safe_int_from_bytes(d, 4, 6, signed=True, scale=0.03)
     ]),
     0x506: ("dynamics.bl_sprung_ang_rate", lambda d: [
-        int.from_bytes(d[0:2], 'little', signed=True) * 0.03,
-        int.from_bytes(d[2:4], 'little', signed=True) * 0.03,
-        int.from_bytes(d[4:6], 'little', signed=True) * 0.03
+        safe_int_from_bytes(d, 0, 2, signed=True, scale=0.03),
+        safe_int_from_bytes(d, 2, 4, signed=True, scale=0.03),
+        safe_int_from_bytes(d, 4, 6, signed=True, scale=0.03)
     ]),
     0x507: ("dynamics.br_sprung_ang_rate", lambda d: [
-        int.from_bytes(d[0:2], 'little', signed=True) * 0.03,
-        int.from_bytes(d[2:4], 'little', signed=True) * 0.03,
-        int.from_bytes(d[4:6], 'little', signed=True) * 0.03
+        safe_int_from_bytes(d, 0, 2, signed=True, scale=0.03),
+        safe_int_from_bytes(d, 2, 4, signed=True, scale=0.03),
+        safe_int_from_bytes(d, 4, 6, signed=True, scale=0.03)
     ]),
     
     # Dynamics - Center mass (placeholder for now)
@@ -115,10 +126,10 @@ CAN_MAPPING = {
     
     # Controls - APPS and BPPS (multiple fields per CAN ID)
     0xF1: [
-        ("controls.apps1_v", lambda d: int.from_bytes(d[0:2], 'little') * 0.0001),
-        ("controls.apps2_v", lambda d: int.from_bytes(d[2:4], 'little') * 0.0001),
-        ("controls.apps1_t", lambda d: int.from_bytes(d[4:6], 'little') * 0.01),
-        ("controls.apps2_t", lambda d: int.from_bytes(d[6:8], 'little') * 0.01),
+        ("controls.apps1_v", lambda d: safe_int_from_bytes(d, 0, 2, signed=False, scale=0.0001)),
+        ("controls.apps2_v", lambda d: safe_int_from_bytes(d, 2, 4, signed=False, scale=0.0001)),
+        ("controls.apps1_t", lambda d: safe_int_from_bytes(d, 4, 6, signed=False, scale=0.01)),
+        ("controls.apps2_t", lambda d: safe_int_from_bytes(d, 6, 8, signed=False, scale=0.01)),
         ("diagnostics_high.apps1_disconnect", lambda d: bool(d[2] & 0x01)),
         ("diagnostics_high.apps2_disconnect", lambda d: bool(d[2] & 0x02)),
         ("diagnostics_high.apps1_out_range", lambda d: bool(d[2] & 0x04)),
@@ -129,10 +140,10 @@ CAN_MAPPING = {
     
     # Controls - BPPS (multiple fields per CAN ID)
     0xF3: [
-        ("controls.bpps1_v", lambda d: int.from_bytes(d[0:2], 'little') * 0.0001),
-        ("controls.bpps2_v", lambda d: int.from_bytes(d[2:4], 'little') * 0.0001),
-        ("controls.bpps1_t", lambda d: int.from_bytes(d[4:6], 'little') * 0.01),
-        ("controls.bpps2_t", lambda d: int.from_bytes(d[6:8], 'little') * 0.01),
+        ("controls.bpps1_v", lambda d: safe_int_from_bytes(d, 0, 2, signed=False, scale=0.0001)),
+        ("controls.bpps2_v", lambda d: safe_int_from_bytes(d, 2, 4, signed=False, scale=0.0001)),
+        ("controls.bpps1_t", lambda d: safe_int_from_bytes(d, 4, 6, signed=False, scale=0.01)),
+        ("controls.bpps2_t", lambda d: safe_int_from_bytes(d, 6, 8, signed=False, scale=0.01)),
         ("diagnostics_high.bpps1_disconnect", lambda d: bool(d[2] & 0x01)),
         ("diagnostics_high.bpps2_disconnect", lambda d: bool(d[2] & 0x02)),
         ("diagnostics_high.bpps1_out_range", lambda d: bool(d[2] & 0x04)),
@@ -142,17 +153,17 @@ CAN_MAPPING = {
     
     # Controls - BSE voltages (multiple fields per CAN ID)
     0x100: [
-        ("controls.bse1_v", lambda d: int.from_bytes(d[0:2], 'little') * 0.0001),
-        ("controls.bse2_v", lambda d: int.from_bytes(d[2:4], 'little') * 0.0001),
-        ("controls.bse3_v", lambda d: int.from_bytes(d[4:6], 'little') * 0.0001),
+        ("controls.bse1_v", lambda d: safe_int_from_bytes(d, 0, 2, signed=False, scale=0.0001)),
+        ("controls.bse2_v", lambda d: safe_int_from_bytes(d, 2, 4, signed=False, scale=0.0001)),
+        ("controls.bse3_v", lambda d: safe_int_from_bytes(d, 4, 6, signed=False, scale=0.0001)),
     ],
     
     # Controls - Brake system (multiple fields per CAN ID)
     0xA04: [
-        ("controls.brake_pressure_f", lambda d: int.from_bytes(d[0:2], 'little') * 0.05),
-        ("controls.brake_pressure_rbll", lambda d: int.from_bytes(d[2:4], 'little') * 0.05),
-        ("controls.brake_pressure_rall", lambda d: int.from_bytes(d[4:6], 'little') * 0.05),
-        ("controls.brake_bias", lambda d: d[6] * 0.01),
+        ("controls.brake_pressure_f", lambda d: safe_int_from_bytes(d, 0, 2, signed=False, scale=0.05)),
+        ("controls.brake_pressure_rbll", lambda d: safe_int_from_bytes(d, 2, 4, signed=False, scale=0.05)),
+        ("controls.brake_pressure_rall", lambda d: safe_int_from_bytes(d, 4, 6, signed=False, scale=0.05)),
+        ("controls.brake_bias", lambda d: safe_int_from_bytes(d, 6, 8, signed=False, scale=0.01)),
         ("diagnostics_high.bse1_disconnect", lambda d: bool(d[7] & 0x01)),
         ("diagnostics_high.bse2_disconnect", lambda d: bool(d[7] & 0x02)),
         ("diagnostics_high.bse1_out_range", lambda d: bool(d[7] & 0x04)),
@@ -161,19 +172,18 @@ CAN_MAPPING = {
     
     # Pack - Battery pack status (multiple fields per CAN ID)
     0x200: [
-        ("pack.hv_pack_v", lambda d: int.from_bytes(d[0:2], 'little') * 0.01),
-        ("pack.hv_tractive_v", lambda d: int.from_bytes(d[2:4], 'little') * 0.01),
-        ("pack.hv_c", lambda d: int.from_bytes(d[4:6], 'little') * 0.01),
-        ("pack.hv_soc", lambda d: int.from_bytes(d[6:8], 'little') * 0.01),
+        ("pack.hv_pack_v", lambda d: safe_int_from_bytes(d, 0, 2, signed=False, scale=0.01)),
+        ("pack.hv_c", lambda d: safe_int_from_bytes(d, 2, 4, signed=False, scale=0.01)),
+        ("pack.hv_soc", lambda d: safe_int_from_bytes(d, 4, 6, signed=False, scale=0.01)),
+        ("pack.cell_top_temp", lambda d: safe_int_from_bytes(d, 6, 7, signed=False, scale=1.0)),
+        ("pack.cell_bottom_temp", lambda d: safe_int_from_bytes(d, 7, 8, signed=False, scale=1.0)),
     ],
     
-    # Pack - Additional battery data (multiple fields per CAN ID)
+    # Pack - Contactor status (multiple fields per CAN ID)
     0x203: [
-        ("pack.lv_v", lambda d: int.from_bytes(d[0:2], 'little') * 0.01),
-        ("pack.lv_c", lambda d: int.from_bytes(d[2:4], 'little') * 0.01),
-        ("pack.contactor_state", lambda d: d[4]),
-        ("pack.avg_cell_v", lambda d: int.from_bytes(d[5:7], 'little') * 0.001),
-        ("pack.avg_cell_temp", lambda d: int.from_bytes(d[7:8], 'little', signed=True) * 0.1),
+        ("pack.hvc_state_machine", lambda d: safe_int_from_bytes(d, 0, 1, signed=False, scale=1.0)),
+        ("pack.pos_contactor", lambda d: safe_int_from_bytes(d, 1, 2, signed=False, scale=1.0)),
+        ("pack.neg_contactor", lambda d: safe_int_from_bytes(d, 2, 3, signed=False, scale=1.0)),
     ],
     
     # Diagnostics Low - Shutdown legs and errors (multiple fields per CAN ID)
@@ -201,44 +211,44 @@ CAN_MAPPING = {
     # Diagnostics Low - Battery status (multiple fields per CAN ID)
     0x205: [
         ("diagnostics_low.cells_v_balanced", lambda d: bool(d[0])),
-        ("diagnostics_low.cell_min_v", lambda d: int.from_bytes(d[1:3], 'little') * 0.001),
-        ("diagnostics_low.cell_max_v", lambda d: int.from_bytes(d[3:5], 'little') * 0.001),
-        ("diagnostics_low.batt_v", lambda d: int.from_bytes(d[5:7], 'little') * 0.01),
-        ("diagnostics_low.batt_c", lambda d: int.from_bytes(d[7:8], 'little', signed=True) * 0.1),
+        ("diagnostics_low.cell_min_v", lambda d: safe_int_from_bytes(d, 1, 3, signed=False, scale=0.001)),
+        ("diagnostics_low.cell_max_v", lambda d: safe_int_from_bytes(d, 3, 5, signed=False, scale=0.001)),
+        ("diagnostics_low.batt_v", lambda d: safe_int_from_bytes(d, 5, 7, signed=False, scale=0.01)),
+        ("diagnostics_low.batt_c", lambda d: safe_int_from_bytes(d, 7, 8, signed=True, scale=0.1)),
     ],
     
     # Thermal - Motor cooling (multiple fields per CAN ID)
     0x102: [
-        ("thermal.motor_loop_flow_rate", lambda d: int.from_bytes(d[0:2], 'little') * 0.1),
-        ("thermal.motor_loop_motor_temp", lambda d: int.from_bytes(d[2:4], 'little', signed=True) * 0.01),
-        ("thermal.motor_loop_inverter_temp", lambda d: int.from_bytes(d[4:6], 'little', signed=True) * 0.01),
-        ("thermal.motor_loop_rad_temp", lambda d: int.from_bytes(d[6:8], 'little', signed=True) * 0.01),
+        ("thermal.motor_loop_flow_rate", lambda d: safe_int_from_bytes(d, 0, 2, signed=False, scale=0.1)),
+        ("thermal.motor_loop_motor_temp", lambda d: safe_int_from_bytes(d, 2, 4, signed=True, scale=0.01)),
+        ("thermal.motor_loop_inverter_temp", lambda d: safe_int_from_bytes(d, 4, 6, signed=True, scale=0.01)),
+        ("thermal.motor_loop_rad_temp", lambda d: safe_int_from_bytes(d, 6, 8, signed=True, scale=0.01)),
     ],
     
     # Thermal - Motor cooling fan speed (separate message)
-    0x106: ("thermal.motor_loop_rad_fan_speed", lambda d: int.from_bytes(d[0:2], 'little') * 0.2),
+    0x106: ("thermal.motor_loop_rad_fan_speed", lambda d: safe_int_from_bytes(d, 0, 2, signed=False, scale=0.2)),
     
     # Thermal - Battery cooling (multiple fields per CAN ID)
     0x103: [
-        ("thermal.batt_loop_batt_temp", lambda d: int.from_bytes(d[0:2], 'little', signed=True) * 0.01),
-        ("thermal.batt_loop_rad_temp", lambda d: int.from_bytes(d[2:4], 'little', signed=True) * 0.01),
-        ("thermal.batt_loop_rad_fan_speed", lambda d: int.from_bytes(d[4:6], 'little') * 0.2),
+        ("thermal.batt_loop_batt_temp", lambda d: safe_int_from_bytes(d, 0, 2, signed=True, scale=0.01)),
+        ("thermal.batt_loop_rad_temp", lambda d: safe_int_from_bytes(d, 2, 4, signed=True, scale=0.01)),
+        ("thermal.batt_loop_rad_fan_speed", lambda d: safe_int_from_bytes(d, 4, 6, signed=False, scale=0.2)),
     ],
     
     # Thermal - Component temperatures (multiple fields per CAN ID)
     0x104: [
-        ("thermal.motor_temp", lambda d: int.from_bytes(d[2:4], 'little', signed=True) * 0.01),
-        ("thermal.inverter_temp", lambda d: int.from_bytes(d[0:2], 'little', signed=True) * 0.01),
-        ("thermal.ambient_temp", lambda d: int.from_bytes(d[4:6], 'little', signed=True) * 0.01),
-        ("thermal.discharge_r_temp", lambda d: int.from_bytes(d[6:8], 'little', signed=True) * 0.01),
+        ("thermal.motor_temp", lambda d: safe_int_from_bytes(d, 2, 4, signed=True, scale=0.01)),
+        ("thermal.inverter_temp", lambda d: safe_int_from_bytes(d, 0, 2, signed=True, scale=0.01)),
+        ("thermal.ambient_temp", lambda d: safe_int_from_bytes(d, 4, 6, signed=True, scale=0.01)),
+        ("thermal.discharge_r_temp", lambda d: safe_int_from_bytes(d, 6, 8, signed=True, scale=0.01)),
     ],
     
     # Thermal - Bus bar temperatures (multiple fields per CAN ID)
     0x201: [
-        ("thermal.bus_bar_temp1", lambda d: int.from_bytes(d[0:2], 'little') * 0.1),
-        ("thermal.bus_bar_temp2", lambda d: int.from_bytes(d[2:4], 'little') * 0.1),
-        ("thermal.bus_bar_temp3", lambda d: int.from_bytes(d[4:6], 'little') * 0.1),
-        ("thermal.precharge_r_temp", lambda d: int.from_bytes(d[6:8], 'little') * 0.1),
+        ("thermal.bus_bar_temp1", lambda d: safe_int_from_bytes(d, 0, 2, signed=False, scale=0.1)),
+        ("thermal.bus_bar_temp2", lambda d: safe_int_from_bytes(d, 2, 4, signed=False, scale=0.1)),
+        ("thermal.bus_bar_temp3", lambda d: safe_int_from_bytes(d, 4, 6, signed=False, scale=0.1)),
+        ("thermal.precharge_r_temp", lambda d: safe_int_from_bytes(d, 6, 8, signed=False, scale=0.1)),
     ],
     
     # Thermal - Battery over temperature (separate message)
@@ -247,21 +257,21 @@ CAN_MAPPING = {
     # GPS data - Front GPS (multiple fields per CAN ID)
     0x110: [
         ("dynamics.f_gps", lambda d: [
-            int.from_bytes(d[0:2], 'little', signed=True) * 0.001,
-            int.from_bytes(d[2:4], 'little', signed=True) * 0.001
+            safe_int_from_bytes(d, 0, 2, signed=True, scale=0.001),
+            safe_int_from_bytes(d, 2, 4, signed=True, scale=0.001)
         ]),
-        ("dynamics.f_gps_velocity", lambda d: int.from_bytes(d[4:6], 'little') * 0.001),
-        ("dynamics.f_gps_heading", lambda d: int.from_bytes(d[6:8], 'little') * 0.001),
+        ("dynamics.f_gps_velocity", lambda d: safe_int_from_bytes(d, 4, 6, signed=False, scale=0.001)),
+        ("dynamics.f_gps_heading", lambda d: safe_int_from_bytes(d, 6, 8, signed=False, scale=0.001)),
     ],
     
     # GPS data - Back GPS (multiple fields per CAN ID)
     0x101: [
         ("dynamics.b_gps", lambda d: [
-            int.from_bytes(d[0:2], 'little', signed=True) * 0.001,
-            int.from_bytes(d[2:4], 'little', signed=True) * 0.001
+            safe_int_from_bytes(d, 0, 2, signed=True, scale=0.001),
+            safe_int_from_bytes(d, 2, 4, signed=True, scale=0.001)
         ]),
-        ("dynamics.b_gps_velocity", lambda d: int.from_bytes(d[4:6], 'little') * 0.001),
-        ("dynamics.b_gps_heading", lambda d: int.from_bytes(d[6:8], 'little') * 0.001),
+        ("dynamics.b_gps_velocity", lambda d: safe_int_from_bytes(d, 4, 6, signed=False, scale=0.001)),
+        ("dynamics.b_gps_heading", lambda d: safe_int_from_bytes(d, 6, 8, signed=False, scale=0.001)),
     ],
     
     # Legacy mapping for shutdown_leg1 (0x6CA)
