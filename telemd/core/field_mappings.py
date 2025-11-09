@@ -1,279 +1,225 @@
-# Safe conversion function to handle conversion errors
-def safe_int_from_bytes(data, start, end, signed=False, scale=1.0, fallback=0.0):
-    """Safely convert bytes to integer with error handling"""
+import statistics
+
+# New conversion function to handle different operations
+def process_can_data(data, start, end, signed=False, scale=1.0, operation='none', fallback=0.0):
+    """
+    Safely convert bytes to a value with a specified operation.
+    Operations:
+    - 'none', 'scaling': Treat bytes as a single integer and apply scaling.
+    - 'mean', 'max', 'min': Treat each byte in the slice as a separate value
+      and perform the specified operation. This is based on the interpretation
+      that these operations apply to the byte values themselves.
+    """
     try:
         if start >= len(data) or end > len(data):
             return fallback
-        value = int.from_bytes(data[start:end], 'little', signed=signed)
-        return value * scale
+
+        byte_slice = data[start:end]
+        if not byte_slice:
+            return fallback
+
+        if operation in ['mean', 'max', 'min']:
+            # Assumption: operation is on individual bytes in the slice.
+            if signed:
+                # Convert each byte to a signed integer
+                values = [int.from_bytes([b], 'little', signed=True) for b in byte_slice]
+            else:
+                values = list(byte_slice)
+            
+            if not values:
+                return fallback
+
+            if operation == 'mean':
+                result = statistics.mean(values)
+            elif operation == 'max':
+                result = max(values)
+            else: # 'min'
+                result = min(values)
+            
+            return result * scale
+
+        else:  # 'none' or 'scaling'
+            value = int.from_bytes(byte_slice, 'little', signed=signed)
+            return value * scale
+            
     except (ValueError, OverflowError, IndexError):
         return fallback
 
-#define lambdas outside to avoid recompliations
 CAN_MAPPING = {
-    # Dynamics - Steering and angles
-    0xA05: ("dynamics.steer_col_angle", lambda d: safe_int_from_bytes(d, 0, 2, signed=True, scale=0.004)),
-    0x400: ("dynamics.fl_steer_angle", lambda d: safe_int_from_bytes(d, 0, 2, signed=True, scale=0.001)),
-    0x401: ("dynamics.fr_steer_angle", lambda d: safe_int_from_bytes(d, 0, 2, signed=True, scale=0.001)),
-    
-    # Dynamics - Wheel data (multiple fields per CAN ID)
-    0x406: [
-        ("dynamics.flw_speed", lambda d: safe_int_from_bytes(d, 0, 2, signed=True, scale=0.01)),
-        ("dynamics.fl_strain_gauge_v", lambda d: safe_int_from_bytes(d, 2, 4, signed=True, scale=0.0002)),
-        ("dynamics.fl_pushrod_stress", lambda d: safe_int_from_bytes(d, 4, 6, signed=True, scale=0.5)),
-        ("dynamics.fl_spring_displace", lambda d: safe_int_from_bytes(d, 6, 8, signed=False, scale=0.001)),
+    0x0A0: [
+        ("Inverter Temp", lambda d: process_can_data(d, 0, 2, signed=True, operation='mean')),
     ],
-    0x407: [
-        ("dynamics.frw_speed", lambda d: safe_int_from_bytes(d, 0, 2, signed=True, scale=0.01)),
-        ("dynamics.fr_strain_gauge_v", lambda d: safe_int_from_bytes(d, 2, 4, signed=True, scale=0.0002)),
-        ("dynamics.fr_pushrod_stress", lambda d: safe_int_from_bytes(d, 4, 6, signed=True, scale=0.5)),
-        ("dynamics.fr_spring_displace", lambda d: safe_int_from_bytes(d, 6, 8, signed=False, scale=0.001)),
+    0x0A2: [
+        ("Motor Temp", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.1)),
     ],
-    0x408: [
-        ("dynamics.blw_speed", lambda d: safe_int_from_bytes(d, 0, 2, signed=True, scale=0.01)),
-        ("dynamics.bl_strain_gauge_v", lambda d: safe_int_from_bytes(d, 2, 4, signed=True, scale=0.0002)),
-        ("dynamics.bl_pushrod_stress", lambda d: safe_int_from_bytes(d, 4, 6, signed=True, scale=0.5)),
-        ("dynamics.bl_spring_displace", lambda d: safe_int_from_bytes(d, 6, 8, signed=False, scale=0.001)),
+    0x0A5: [
+        ("Motor Angle", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.1)),
+        ("RPM", lambda d: process_can_data(d, 2, 4, signed=True)),
+        ("Inverter Frequency", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.1)),
+        ("Resolver Angle", lambda d: process_can_data(d, 6, 8, signed=True, scale=0.1)),
     ],
-    0x409: [
-        ("dynamics.brw_speed", lambda d: safe_int_from_bytes(d, 0, 2, signed=True, scale=0.01)),
-        ("dynamics.br_strain_gauge_v", lambda d: safe_int_from_bytes(d, 2, 4, signed=True, scale=0.0002)),
-        ("dynamics.br_pushrod_stress", lambda d: safe_int_from_bytes(d, 4, 6, signed=True, scale=0.5)),
-        ("dynamics.br_spring_displace", lambda d: safe_int_from_bytes(d, 6, 8, signed=False, scale=0.001)),
+    0x0A6: [
+        ("Phase A Current", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.1)),
+        ("Phase B Current", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.1)),
+        ("Phase C Current", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.1)),
+        ("Current Input into DC", lambda d: process_can_data(d, 6, 8, signed=True, scale=0.1)),
     ],
-    
-    # Dynamics - Sprung mass data (multiple fields per CAN ID)
-    0x500: [
-        ("dynamics.fl_ride_height", lambda d: safe_int_from_bytes(d, 6, 8, signed=False, scale=0.002)),
-        ("dynamics.fl_sprung_accel", lambda d: [
-            safe_int_from_bytes(d, 0, 2, signed=True, scale=0.001),
-            safe_int_from_bytes(d, 2, 4, signed=True, scale=0.001),
-            safe_int_from_bytes(d, 4, 6, signed=True, scale=0.001)
-        ]),
+    0x0A7: [
+        ("Voltage Input into DC", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.1)),
+        ("Output Voltage", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.1)),
+        ("AB Voltage", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.1)),
+        ("BC Voltage", lambda d: process_can_data(d, 6, 8, signed=True, scale=0.1)),
     ],
-    0x501: [
-        ("dynamics.fr_ride_height", lambda d: safe_int_from_bytes(d, 6, 8, signed=False, scale=0.002)),
-        ("dynamics.fr_sprung_accel", lambda d: [
-            safe_int_from_bytes(d, 0, 2, signed=True, scale=0.001),
-            safe_int_from_bytes(d, 2, 4, signed=True, scale=0.001),
-            safe_int_from_bytes(d, 4, 6, signed=True, scale=0.001)
-        ]),
+    0x0AA: [
+        ("State Vector", lambda d: process_can_data(d, 0, 8, signed=False)),
     ],
-    0x502: [
-        ("dynamics.bl_ride_height", lambda d: safe_int_from_bytes(d, 6, 8, signed=False, scale=0.002)),
-        ("dynamics.bl_sprung_accel", lambda d: [
-            safe_int_from_bytes(d, 0, 2, signed=True, scale=0.001),
-            safe_int_from_bytes(d, 2, 4, signed=True, scale=0.001),
-            safe_int_from_bytes(d, 4, 6, signed=True, scale=0.001)
-        ]),
+    0x0AB: [
+        ("Fault Vector", lambda d: process_can_data(d, 0, 8, signed=False)),
     ],
-    0x503: [
-        ("dynamics.br_ride_height", lambda d: safe_int_from_bytes(d, 6, 8, signed=False, scale=0.002)),
-        ("dynamics.br_sprung_accel", lambda d: [
-            safe_int_from_bytes(d, 0, 2, signed=True, scale=0.001),
-            safe_int_from_bytes(d, 2, 4, signed=True, scale=0.001),
-            safe_int_from_bytes(d, 4, 6, signed=True, scale=0.001)
-        ]),
+    0x0AC: [
+        ("Torque Command", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.1)),
+        ("Actual Torque", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.1)),
     ],
-    
-    # Dynamics - Unsprung acceleration vectors (3D)
-    0x402: ("dynamics.fl_unsprung_accel", lambda d: [
-        safe_int_from_bytes(d, 0, 2, signed=True, scale=0.001),
-        safe_int_from_bytes(d, 2, 4, signed=True, scale=0.001),
-        safe_int_from_bytes(d, 4, 6, signed=True, scale=0.001)
-    ]),
-    0x403: ("dynamics.fr_unsprung_accel", lambda d: [
-        safe_int_from_bytes(d, 0, 2, signed=True, scale=0.001),
-        safe_int_from_bytes(d, 2, 4, signed=True, scale=0.001),
-        safe_int_from_bytes(d, 4, 6, signed=True, scale=0.001)
-    ]),
-    0x404: ("dynamics.bl_unsprung_accel", lambda d: [
-        safe_int_from_bytes(d, 0, 2, signed=True, scale=0.001),
-        safe_int_from_bytes(d, 2, 4, signed=True, scale=0.001),
-        safe_int_from_bytes(d, 4, 6, signed=True, scale=0.001)
-    ]),
-    0x405: ("dynamics.br_unsprung_accel", lambda d: [
-        safe_int_from_bytes(d, 0, 2, signed=True, scale=0.001),
-        safe_int_from_bytes(d, 2, 4, signed=True, scale=0.001),
-        safe_int_from_bytes(d, 4, 6, signed=True, scale=0.001)
-    ]),
-    
-    # Dynamics - Angular rate vectors (3D)
-    0x504: ("dynamics.fl_sprung_ang_rate", lambda d: [
-        safe_int_from_bytes(d, 0, 2, signed=True, scale=0.03),
-        safe_int_from_bytes(d, 2, 4, signed=True, scale=0.03),
-        safe_int_from_bytes(d, 4, 6, signed=True, scale=0.03)
-    ]),
-    0x505: ("dynamics.fr_sprung_ang_rate", lambda d: [
-        safe_int_from_bytes(d, 0, 2, signed=True, scale=0.03),
-        safe_int_from_bytes(d, 2, 4, signed=True, scale=0.03),
-        safe_int_from_bytes(d, 4, 6, signed=True, scale=0.03)
-    ]),
-    0x506: ("dynamics.bl_sprung_ang_rate", lambda d: [
-        safe_int_from_bytes(d, 0, 2, signed=True, scale=0.03),
-        safe_int_from_bytes(d, 2, 4, signed=True, scale=0.03),
-        safe_int_from_bytes(d, 4, 6, signed=True, scale=0.03)
-    ]),
-    0x507: ("dynamics.br_sprung_ang_rate", lambda d: [
-        safe_int_from_bytes(d, 0, 2, signed=True, scale=0.03),
-        safe_int_from_bytes(d, 2, 4, signed=True, scale=0.03),
-        safe_int_from_bytes(d, 4, 6, signed=True, scale=0.03)
-    ]),
-    
-    # Dynamics - Center mass (placeholder for now)
-    0x111: ("dynamics.cent_mass_accel", lambda d: [0.0, 0.0, 0.0]),
-    0x112: ("dynamics.cent_mass_ang_rate", lambda d: [0.0, 0.0, 0.0]),
-    
-    # Controls - APPS and BPPS (multiple fields per CAN ID)
-    0xF1: [
-        ("controls.apps1_v", lambda d: safe_int_from_bytes(d, 0, 2, signed=False, scale=0.0001)),
-        ("controls.apps2_v", lambda d: safe_int_from_bytes(d, 2, 4, signed=False, scale=0.0001)),
-        ("controls.apps1_t", lambda d: safe_int_from_bytes(d, 4, 6, signed=False, scale=0.01)),
-        ("controls.apps2_t", lambda d: safe_int_from_bytes(d, 6, 8, signed=False, scale=0.01)),
-        ("diagnostics_high.apps1_disconnect", lambda d: bool(d[2] & 0x01)),
-        ("diagnostics_high.apps2_disconnect", lambda d: bool(d[2] & 0x02)),
-        ("diagnostics_high.apps1_out_range", lambda d: bool(d[2] & 0x04)),
-        ("diagnostics_high.apps2_out_range", lambda d: bool(d[2] & 0x08)),
-        ("diagnostics_high.apps_mismatch", lambda d: bool(d[2] & 0x10)),
-        ("diagnostics_high.apps_implause", lambda d: bool(d[2] & 0x20)),
+    0x020: [
+        ("IMD", lambda d: process_can_data(d, 0, 1, signed=False)),
+        ("AMS", lambda d: process_can_data(d, 1, 2, signed=False)),
     ],
-    
-    # Controls - BPPS (multiple fields per CAN ID)
-    0xF3: [
-        ("controls.bpps1_v", lambda d: safe_int_from_bytes(d, 0, 2, signed=False, scale=0.0001)),
-        ("controls.bpps2_v", lambda d: safe_int_from_bytes(d, 2, 4, signed=False, scale=0.0001)),
-        ("controls.bpps1_t", lambda d: safe_int_from_bytes(d, 4, 6, signed=False, scale=0.01)),
-        ("controls.bpps2_t", lambda d: safe_int_from_bytes(d, 6, 8, signed=False, scale=0.01)),
-        ("diagnostics_high.bpps1_disconnect", lambda d: bool(d[2] & 0x01)),
-        ("diagnostics_high.bpps2_disconnect", lambda d: bool(d[2] & 0x02)),
-        ("diagnostics_high.bpps1_out_range", lambda d: bool(d[2] & 0x04)),
-        ("diagnostics_high.bpps2_out_range", lambda d: bool(d[2] & 0x08)),
-        ("diagnostics_high.bpps_mismatch", lambda d: bool(d[2] & 0x10)),
+    0x220: [
+        ("Voltage", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
+        ("Current", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.01)),
+        ("State of Charge", lambda d: process_can_data(d, 4, 5, signed=True, scale=0.01)),
+        ("Pack Temp Maximum", lambda d: process_can_data(d, 5, 6, signed=True)),
+        ("Pack Temp Minimum", lambda d: process_can_data(d, 6, 7, signed=True)),
     ],
-    
-    # Controls - BSE voltages (multiple fields per CAN ID)
-    0x100: [
-        ("controls.bse1_v", lambda d: safe_int_from_bytes(d, 0, 2, signed=False, scale=0.0001)),
-        ("controls.bse2_v", lambda d: safe_int_from_bytes(d, 2, 4, signed=False, scale=0.0001)),
-        ("controls.bse3_v", lambda d: safe_int_from_bytes(d, 4, 6, signed=False, scale=0.0001)),
+    0x420: [
+        ("Contactor Status", lambda d: process_can_data(d, 0, 1, signed=False)),
     ],
-    
-    # Controls - Brake system (multiple fields per CAN ID)
-    0xA04: [
-        ("controls.brake_pressure_f", lambda d: safe_int_from_bytes(d, 0, 2, signed=False, scale=0.05)),
-        ("controls.brake_pressure_rbll", lambda d: safe_int_from_bytes(d, 2, 4, signed=False, scale=0.05)),
-        ("controls.brake_pressure_rall", lambda d: safe_int_from_bytes(d, 4, 6, signed=False, scale=0.05)),
-        ("controls.brake_bias", lambda d: safe_int_from_bytes(d, 6, 8, signed=False, scale=0.01)),
-        ("diagnostics_high.bse1_disconnect", lambda d: bool(d[7] & 0x01)),
-        ("diagnostics_high.bse2_disconnect", lambda d: bool(d[7] & 0x02)),
-        ("diagnostics_high.bse1_out_range", lambda d: bool(d[7] & 0x04)),
-        ("diagnostics_high.bse2_out_range", lambda d: bool(d[7] & 0x08)),
+    0x230: [
+        ("Volumetric Flow Rate", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.1)),
+        ("Water Temp Motor", lambda d: process_can_data(d, 2, 3, signed=True)),
+        ("Water Temp Inverter", lambda d: process_can_data(d, 3, 4, signed=True)),
+        ("Water Temp Radiator", lambda d: process_can_data(d, 4, 5, signed=True)),
+        ("Radiator Fan RPM Percentage", lambda d: process_can_data(d, 5, 6, signed=True)),
     ],
-    
-    # Pack - Battery pack status (multiple fields per CAN ID)
-    0x200: [
-        ("pack.hv_pack_v", lambda d: safe_int_from_bytes(d, 0, 2, signed=False, scale=0.01)),
-        ("pack.hv_c", lambda d: safe_int_from_bytes(d, 2, 4, signed=False, scale=0.01)),
-        ("pack.hv_soc", lambda d: safe_int_from_bytes(d, 4, 6, signed=False, scale=0.01)),
-        ("pack.cell_top_temp", lambda d: safe_int_from_bytes(d, 6, 7, signed=False, scale=1.0)),
-        ("pack.cell_bottom_temp", lambda d: safe_int_from_bytes(d, 7, 8, signed=False, scale=1.0)),
+    0x330: [
+        ("LV Voltage", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
+        ("LV State of Charge", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.01)),
+        ("LV Current", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.01)),
     ],
-    
-    # Pack - Contactor status (multiple fields per CAN ID)
-    0x203: [
-        ("pack.hvc_state_machine", lambda d: safe_int_from_bytes(d, 0, 1, signed=False, scale=1.0)),
-        ("pack.pos_contactor", lambda d: safe_int_from_bytes(d, 1, 2, signed=False, scale=1.0)),
-        ("pack.neg_contactor", lambda d: safe_int_from_bytes(d, 2, 3, signed=False, scale=1.0)),
+    0x340: [
+        ("Front Right Wheel Speed", lambda d: process_can_data(d, 0, 4, signed=True, scale=0.0025)),
     ],
-    
-    # Diagnostics Low - Shutdown legs and errors (multiple fields per CAN ID)
-    0x202: [
-        ("diagnostics_low.bmb_comm_error", lambda d: bool(d[0])),
-        ("diagnostics_low.imd_gnd_isolation_error", lambda d: bool(d[1])),
-        ("diagnostics_low.shutdown_leg1", lambda d: bool(d[2])),
-        ("diagnostics_low.shutdown_leg2", lambda d: bool(d[3])),
-        ("diagnostics_low.shutdown_leg3", lambda d: bool(d[4])),
-        ("diagnostics_low.shutdown_leg4", lambda d: bool(d[5])),
+    0x344: [
+        ("Front Left Wheel Speed", lambda d: process_can_data(d, 0, 4, signed=True, scale=0.0025)),
     ],
-    
-    # Diagnostics Low - Additional battery diagnostics (multiple fields per CAN ID)
-    0x204: [
-        ("diagnostics_low.batt_over_c", lambda d: bool(d[0])),
-        ("diagnostics_low.cell_over_v", lambda d: d[1]),
-        ("diagnostics_low.cell_under_v", lambda d: d[2]),
-        ("diagnostics_low.cell_open_wire", lambda d: d[3]),
-        ("diagnostics_low.cell_damaged", lambda d: d[4]),
-        ("diagnostics_low.thermistor_damaged", lambda d: d[5]),
-        ("diagnostics_low.tractive_contactor_error", lambda d: bool(d[6])),
-        ("diagnostics_low.precharge_fail", lambda d: bool(d[7])),
+    0x348: [
+        ("Back Right Wheel Speed", lambda d: process_can_data(d, 0, 4, signed=True, scale=0.0025)),
     ],
-    
-    # Diagnostics Low - Battery status (multiple fields per CAN ID)
-    0x205: [
-        ("diagnostics_low.cells_v_balanced", lambda d: bool(d[0])),
-        ("diagnostics_low.cell_min_v", lambda d: safe_int_from_bytes(d, 1, 3, signed=False, scale=0.001)),
-        ("diagnostics_low.cell_max_v", lambda d: safe_int_from_bytes(d, 3, 5, signed=False, scale=0.001)),
-        ("diagnostics_low.batt_v", lambda d: safe_int_from_bytes(d, 5, 7, signed=False, scale=0.01)),
-        ("diagnostics_low.batt_c", lambda d: safe_int_from_bytes(d, 7, 8, signed=True, scale=0.1)),
+    0x34C: [
+        ("Back Left Wheel Speed", lambda d: process_can_data(d, 0, 4, signed=True, scale=0.0025)),
     ],
-    
-    # Thermal - Motor cooling (multiple fields per CAN ID)
-    0x102: [
-        ("thermal.motor_loop_flow_rate", lambda d: safe_int_from_bytes(d, 0, 2, signed=False, scale=0.1)),
-        ("thermal.motor_loop_motor_temp", lambda d: safe_int_from_bytes(d, 2, 4, signed=True, scale=0.01)),
-        ("thermal.motor_loop_inverter_temp", lambda d: safe_int_from_bytes(d, 4, 6, signed=True, scale=0.01)),
-        ("thermal.motor_loop_rad_temp", lambda d: safe_int_from_bytes(d, 6, 8, signed=True, scale=0.01)),
+    0x221: [
+        ("HVC Acceleration X", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
+        ("HVC Acceleration Y", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.01)),
+        ("HVC Acceleration Z", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.01)),
     ],
-    
-    # Thermal - Motor cooling fan speed (separate message)
-    0x106: ("thermal.motor_loop_rad_fan_speed", lambda d: safe_int_from_bytes(d, 0, 2, signed=False, scale=0.2)),
-    
-    # Thermal - Battery cooling (multiple fields per CAN ID)
-    0x103: [
-        ("thermal.batt_loop_batt_temp", lambda d: safe_int_from_bytes(d, 0, 2, signed=True, scale=0.01)),
-        ("thermal.batt_loop_rad_temp", lambda d: safe_int_from_bytes(d, 2, 4, signed=True, scale=0.01)),
-        ("thermal.batt_loop_rad_fan_speed", lambda d: safe_int_from_bytes(d, 4, 6, signed=False, scale=0.2)),
+    0x231: [
+        ("PDU Acceleration X", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
+        ("PDU Acceleration Y", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.01)),
+        ("PDU Acceleration Z", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.01)),
     ],
-    
-    # Thermal - Component temperatures (multiple fields per CAN ID)
-    0x104: [
-        ("thermal.motor_temp", lambda d: safe_int_from_bytes(d, 2, 4, signed=True, scale=0.01)),
-        ("thermal.inverter_temp", lambda d: safe_int_from_bytes(d, 0, 2, signed=True, scale=0.01)),
-        ("thermal.ambient_temp", lambda d: safe_int_from_bytes(d, 4, 6, signed=True, scale=0.01)),
-        ("thermal.discharge_r_temp", lambda d: safe_int_from_bytes(d, 6, 8, signed=True, scale=0.01)),
+    0x341: [
+        ("Front Right Acceleration X", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
+        ("Front Right Acceleration Y", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.01)),
+        ("Front Right Acceleration Z", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.01)),
     ],
-    
-    # Thermal - Bus bar temperatures (multiple fields per CAN ID)
-    0x201: [
-        ("thermal.bus_bar_temp1", lambda d: safe_int_from_bytes(d, 0, 2, signed=False, scale=0.1)),
-        ("thermal.bus_bar_temp2", lambda d: safe_int_from_bytes(d, 2, 4, signed=False, scale=0.1)),
-        ("thermal.bus_bar_temp3", lambda d: safe_int_from_bytes(d, 4, 6, signed=False, scale=0.1)),
-        ("thermal.precharge_r_temp", lambda d: safe_int_from_bytes(d, 6, 8, signed=False, scale=0.1)),
+    0x345: [
+        ("Front Left Acceleration X", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
+        ("Front Left Acceleration Y", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.01)),
+        ("Front Left Acceleration Z", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.01)),
     ],
-    
-    # Thermal - Battery over temperature (separate message)
-    0x107: ("thermal.batt_over_temp", lambda d: bool(d[0])),
-    
-    # GPS data - Front GPS (multiple fields per CAN ID)
-    0x110: [
-        ("dynamics.f_gps", lambda d: [
-            safe_int_from_bytes(d, 0, 2, signed=True, scale=0.001),
-            safe_int_from_bytes(d, 2, 4, signed=True, scale=0.001)
-        ]),
-        ("dynamics.f_gps_velocity", lambda d: safe_int_from_bytes(d, 4, 6, signed=False, scale=0.001)),
-        ("dynamics.f_gps_heading", lambda d: safe_int_from_bytes(d, 6, 8, signed=False, scale=0.001)),
+    0x349: [
+        ("Back Right Acceleration X", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
+        ("Back Right Acceleration Y", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.01)),
+        ("Back Right Acceleration Z", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.01)),
     ],
-    
-    # GPS data - Back GPS (multiple fields per CAN ID)
-    0x101: [
-        ("dynamics.b_gps", lambda d: [
-            safe_int_from_bytes(d, 0, 2, signed=True, scale=0.001),
-            safe_int_from_bytes(d, 2, 4, signed=True, scale=0.001)
-        ]),
-        ("dynamics.b_gps_velocity", lambda d: safe_int_from_bytes(d, 4, 6, signed=False, scale=0.001)),
-        ("dynamics.b_gps_heading", lambda d: safe_int_from_bytes(d, 6, 8, signed=False, scale=0.001)),
+    0x34D: [
+        ("Back Left Acceleration X", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
+        ("Back Left Acceleration Y", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.01)),
+        ("Back Left Acceleration Z", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.01)),
     ],
-    
-    # Legacy mapping for shutdown_leg1 (0x6CA)
-    0x6CA: ("diagnostics_low.shutdown_leg1", lambda d: bool(d[0]) if len(d) > 0 else False)
+    **{
+        i: [
+            ("Cell Voltage Mean", lambda d: process_can_data(d, 0, 2, signed=True, operation='mean')),
+            ("Cell Voltage Max", lambda d: process_can_data(d, 2, 4, signed=True, operation='max')),
+            ("Cell Voltage Min", lambda d: process_can_data(d, 4, 6, signed=True, operation='min')),
+        ]
+        for i in range(0x370, 0x393)
+    },
+    **{
+        i: [
+            ("Cell Temps Mean", lambda d: process_can_data(d, 0, 2, signed=True, operation='mean')),
+            ("Cell Temps Max", lambda d: process_can_data(d, 2, 4, signed=True)),
+            ("Cell Temps Min", lambda d: process_can_data(d, 4, 6, signed=True)),
+        ]
+        for i in range(0x470, 0x487)
+    }
 }
+
+# Mapping from server field names to CSV column names
+
+CSV_PROTBUF_MAPPING = {
+    "time" : "Time",
+    "torque_request": "Inverter Torque Request",
+    "vcu_position": ["Vehicle Displacement X", "Vehicle Displacement Y", "Vehicle Displacement Z"],
+    "vcu_velocity": ["Vehicle Velocity X", "Vehicle Velocity Y", "Vehicle Velocity Z"],
+    "vcu_accel": ["Vehicle Acceleration X", "Vehicle Acceleration Y", "Vehicle Acceleration Z"],
+    "gps": ["Longitude", "Latitude"],
+    "gps_velocity": "Speed",
+    "gps_heading": "Heading",
+    "body1_accel": ["VCU Acceleration X", "VCU Acceleration Y", "VCU Acceleration Z"],
+    "body2_accel": ["HVC Acceleration X", "HVC Acceleration Y", "HVC Acceleration Z"],
+    "body3_accel": ["PDU Acceleration X", "PDU Acceleration Y", "PDU Acceleration Z"],
+    "flw_accel": ["Front Left Acceleration X", "Front Left Acceleration Y", "Front Left Acceleration Z"],
+    "frw_accel": ["Front Right Acceleration X", "Front Right Acceleration Y", "Front Right Acceleration Z"],
+    "blw_accel": ["Back Left Acceleration X", "Back Left Acceleration Y", "Back Left Acceleration Z"],
+    "brw_accel": ["Back Right Acceleration X", "Back Right Acceleration Y", "Back Right Acceleration Z"],
+    "body1_gyro": ["VCU Gyro X", "VCU Gyro Y", "VCU Gyro Z"],
+    "body2_gyro": ["HVC Gyro X", "HVC Gyro Y", "HVC Gyro Z"],
+    "body3_gyro": ["PDU Gyro X", "PDU Gyro Y", "PDU Gyro Z"],
+    "flw_speed": "Front Left Wheel Speed",
+    "frw_speed": "Front Right Wheel Speed",
+    "blw_speed": "Back Left Wheel Speed",
+    "brw_speed": "Back Right Wheel Speed",
+    "inverter_v": "Voltage",
+    "inverter_c": "Current",
+    "inverter_rpm": "RPM",
+    "inverter_torque": "Actual Torque",
+    "apps1_v": "APPS 1 Voltage",
+    "apps2_v": "APPS 2 Voltage",
+    "bse1_v": "BSE 1 Voltage",
+    "bse2_v": "BSE 2 Voltage",
+    "sus1_v": "Suspension 1 Voltage",
+    "sus2_v": "Suspension 2 Voltage",
+    "steer_v": "Steer Voltage",
+    "hv_pack_v": "Pack Voltage Mean",
+    "hv_tractive_v": "Voltage Input into DC",
+    "hv_c": "Current Input into DC",
+    "lv_v": "LV Voltage",
+    "lv_c": "LV Current",
+    "contactor_state": "Contactor Status",
+    "avg_cell_v": "Cell Voltage Mean",
+    "avg_cell_temp": "Cell Temps Mean",
+    "hv_charge_state": "State of Charge",
+    "lv_charge_state": "LV State of Charge",
+    "cells_temp": ["Segment 1 Max", "Segment 1 Min", "Segment 2 Max", "Segment 2 Min", 
+                "Segment 3 Max", "Segment 3 Min", "Segment 4 Max", "Segment 4 Min"],
+    "inverter_temp": "Inverter Temp",
+    "motor_temp": "Motor Temp",
+    "water_motor_temp": "Water Temp Motor",
+    "water_inverter_temp": "Water Temp Inverter",
+    "water_rad_temp": "Water Temp Radiator",
+    "rad_fan_rpm": "Radiator Fan RPM Percentage",
+    "flow_rate": "Volumetric Flow Rate"
+}
+
