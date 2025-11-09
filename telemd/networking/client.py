@@ -13,6 +13,52 @@ class TelemetryCache:
         self.cache = {}  # field_name -> latest_value
         self.last_publish_time = time.time()
         self.publish_interval = publish_interval
+        # Initialize odometer value from file at root of telemd folder
+        self.odometer = self._load_odometer()
+
+    # -------------------------
+    # Odometer persistence
+    # -------------------------
+    def _odometer_file_path(self):
+        """Return absolute path to the odometer file at telemd/odometer.
+        This file is referenced relative to this file's directory (../odometer).
+        """
+        here = os.path.dirname(__file__)
+        return os.path.abspath(os.path.join(here, "..", "odometer"))
+
+    def _load_odometer(self) -> float:
+        """Load odometer value from file. If missing or invalid, return 0.0."""
+        path = self._odometer_file_path()
+        try:
+            with open(path, "r") as f:
+                content = f.read().strip()
+                if not content:
+                    return 0.0
+                return float(content)
+        except FileNotFoundError:
+            # No persisted value yet
+            return 0.0
+        except Exception as e:
+            # Corrupt/invalid content, log and continue with 0.0
+            print(f"[WARN] Failed to read odometer from {path}: {e}. Defaulting to 0.0")
+            return 0.0
+
+    def _save_odometer(self):
+        """Persist current odometer value to file atomically."""
+        path = self._odometer_file_path()
+        tmp_path = path + ".tmp"
+        try:
+            # Ensure parent directory exists (telemd/)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(tmp_path, "w") as f:
+                f.write(f"{self.odometer}\n")
+                f.flush()
+                os.fsync(f.fileno())
+            # Atomic replace: move tmp to target so the original file is fully
+            # replaced in one operation (avoids partial/corrupt writes on crash)
+            os.replace(tmp_path, path)
+        except Exception as e:
+            print(f"[WARN] Failed to write odometer to {path}: {e}")
         
     def update_value(self, can_id, field_name, value):
         """Cache a telemetry value"""
@@ -26,7 +72,16 @@ class TelemetryCache:
         """Publish all cached data to MQTT"""
         if not self.cache:
             return
-            
+        
+        #! TESTING REQUIRED ||| compute odometer value
+        speed = self.cache.get("dynamics.speed") #! dunno if this is the actual value
+        if speed is not None:
+            delta_t = current_time - self.last_publish_time
+            self.odometer += speed * delta_t / 1000  # preserve original scaling
+            self.update_value(None, "diagnostics.odometer", self.odometer)
+            # Persist updated odometer value
+            self._save_odometer()
+        
         # Get current packet ID (local, not from server)
         packet_id = self.mqtt_manager.get_packet_id()
         
