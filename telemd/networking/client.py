@@ -2,7 +2,6 @@ import paho.mqtt.client as mqtt
 import os
 import requests
 import time
-from protobuf import publish_msg
 
 
 class TelemetryCache:

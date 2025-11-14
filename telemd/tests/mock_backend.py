@@ -5,6 +5,9 @@ from websockets import serve
 from websockets.exceptions import ConnectionClosedOK
 import json
 import time
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from protobuf import publish_msg
 import paho.mqtt.client as mqtt
 import os
