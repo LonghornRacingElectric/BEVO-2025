@@ -12,21 +12,29 @@ from protobuf import publish_msg
 import paho.mqtt.client as mqtt
 import os
 
-MQTT_BROKER = "192.168.1.109"
+MQTT_BROKER = "3.135.193.194"
 MQTT_PORT = 1883
 MQTT_TOPIC = "data"
 import os
 
 os.environ["p_id"] = "0"
 
-client = mqtt.Client()
-client.connect(MQTT_BROKER, MQTT_PORT, 60)
-client.loop_start()  # Start MQTT client loop
+client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+mqtt_connected = False
+try:
+    client.connect(MQTT_BROKER, MQTT_PORT, 60)
+    client.loop_start()  # Start MQTT client loop
+    mqtt_connected = True
+    print(f"Successfully connected to MQTT broker at {MQTT_BROKER}:{MQTT_PORT}")
+except Exception as e:
+    print(f"Warning: Could not connect to MQTT broker at {MQTT_BROKER}:{MQTT_PORT}")
+    print(f"MQTT error: {e}")
+    print("Continuing without MQTT functionality.")
 
 import requests
-res = requests.get('https://lhrelectric.org/webtool/handshake/')
-print(res.json()['last_packet'])
-os.environ["p_id"] = str(res.json()['last_packet'])
+#res = requests.get('https://lhrelectric.org/webtool/handshake/')
+#print(res.json()['last_packet'])
+os.environ["p_id"] = "0"
 
 def make_can_msg(arbitration_id, value, scale=1.0):
     scaled = int(value * scale)
@@ -34,15 +42,15 @@ def make_can_msg(arbitration_id, value, scale=1.0):
     return can.Message(arbitration_id=arbitration_id, data=data, is_extended_id=False)
 
 test_can_messages = [
-    make_can_msg(0x113, 40.0, scale=100.0),  # dynamics.flw_speed = 40.0
-    make_can_msg(0x114, 38.0, scale=100.0),  # dynamics.frw_speed = 38.0
-    make_can_msg(0x115, 39.0, scale=100.0),  # dynamics.blw_speed = 39.0
-    make_can_msg(0x116, 39.5, scale=100.0),  # dynamics.brw_speed = 39.5
-    make_can_msg(0x117, 12.5, scale=100.0),  # dynamics.fl_ride_height = 12.5
-    make_can_msg(0x118, 13.0, scale=100.0),  # dynamics.fr_ride_height = 13.0
-    make_can_msg(0x11B, 2.5, scale=100.0),  # dynamics.fl_strain_gauge_v = 2.5
-    make_can_msg(0x11C, 2.45, scale=100.0),  # dynamics.fr_strain_gauge_v = 2.45
-    make_can_msg(0x127, 55.0, scale=100.0),  # dynamics.dash_speed = 55.0
+    make_can_msg(0x0A0, 40.0, scale=100.0),  # dynamics.flw_speed = 40.0
+    # make_can_msg(0x114, 38.0, scale=100.0),  # dynamics.frw_speed = 38.0
+    # make_can_msg(0x115, 39.0, scale=100.0),  # dynamics.blw_speed = 39.0
+    # make_can_msg(0x116, 39.5, scale=100.0),  # dynamics.brw_speed = 39.5
+    # make_can_msg(0x117, 12.5, scale=100.0),  # dynamics.fl_ride_height = 12.5
+    # make_can_msg(0x118, 13.0, scale=100.0),  # dynamics.fr_ride_height = 13.0
+    # make_can_msg(0x11B, 2.5, scale=100.0),  # dynamics.fl_strain_gauge_v = 2.5
+    # make_can_msg(0x11C, 2.45, scale=100.0),  # dynamics.fr_strain_gauge_v = 2.45
+    # make_can_msg(0x127, 55.0, scale=100.0),  # dynamics.dash_speed = 55.0
 ]
 
 async def send_mqtt_messages():
@@ -64,12 +72,15 @@ async def send_mqtt_messages():
         can_buffer.append(data)
 
         now = time.time()
-        if now - last_tick >= 0.003:  
-            p_id = int(os.getenv("p_id"))
-            publish_msg(
-                mqtt_client=client, can_buffer=can_buffer, packet_id=p_id
-            )
-            os.environ["p_id"] = str(p_id + 1)
+        if now - last_tick >= 0.003:
+            if mqtt_connected:  # Only publish if MQTT is connected
+                p_id = int(os.getenv("p_id"))
+                publish_msg(
+                    mqtt_client=client, can_buffer=can_buffer, packet_id=p_id
+                )
+                os.environ["p_id"] = str(p_id + 1)
+            else:
+                print("[DEBUG] MQTT not connected, skipping MQTT message send.")
             can_buffer.clear()
             last_tick = now
 

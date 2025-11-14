@@ -47,125 +47,109 @@ def process_can_data(data, start, end, signed=False, scale=1.0, operation='none'
 
 CAN_MAPPING = {
     0x0A0: [
-        ("Inverter Temp", lambda d: process_can_data(d, 0, 2, signed=True, operation='mean')),
+        ("thermal.inverter_temp", lambda d: process_can_data(d, 0, 2, signed=True, operation='mean')),
     ],
     0x0A2: [
-        ("Motor Temp", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.1)),
+        ("thermal.motor_temp", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.1)),
     ],
     0x0A5: [
-        ("Motor Angle", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.1)),
-        ("RPM", lambda d: process_can_data(d, 2, 4, signed=True)),
-        ("Inverter Frequency", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.1)),
-        ("Resolver Angle", lambda d: process_can_data(d, 6, 8, signed=True, scale=0.1)),
+        ("dynamics.motor_angle", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.1)),
+        ("dynamics.inverter_rpm", lambda d: process_can_data(d, 2, 4, signed=True)),
+        ("dynamics.inverter_frequency", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.1)),
+        ("dynamics.resolver_angle", lambda d: process_can_data(d, 6, 8, signed=True, scale=0.1)),
     ],
     0x0A6: [
-        ("Phase A Current", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.1)),
-        ("Phase B Current", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.1)),
-        ("Phase C Current", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.1)),
-        ("Current Input into DC", lambda d: process_can_data(d, 6, 8, signed=True, scale=0.1)),
+        ("dynamics.phase_a_current", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.1)),
+        ("dynamics.phase_b_current", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.1)),
+        ("dynamics.phase_c_current", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.1)),
+        ("pack.hv_c", lambda d: process_can_data(d, 6, 8, signed=True, scale=0.1)),
     ],
     0x0A7: [
-        ("Voltage Input into DC", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.1)),
-        ("Output Voltage", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.1)),
-        ("AB Voltage", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.1)),
-        ("BC Voltage", lambda d: process_can_data(d, 6, 8, signed=True, scale=0.1)),
+        ("pack.hv_tractive_v", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.1)),
+        ("dynamics.output_voltage", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.1)),
+        ("dynamics.ab_voltage", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.1)),
+        ("dynamics.bc_voltage", lambda d: process_can_data(d, 6, 8, signed=True, scale=0.1)),
     ],
     0x0AA: [
-        ("State Vector", lambda d: process_can_data(d, 0, 8, signed=False)),
+        ("controls.vcu_flags", lambda d: process_can_data(d, 0, 8, signed=False)),
     ],
     0x0AB: [
-        ("Fault Vector", lambda d: process_can_data(d, 0, 8, signed=False)),
+        ("diagnostics.current_errors", lambda d: process_can_data(d, 0, 8, signed=False)),
     ],
     0x0AC: [
-        ("Torque Command", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.1)),
-        ("Actual Torque", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.1)),
+        ("dynamics.torque_request", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.1)),
+        ("dynamics.inverter_torque", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.1)),
     ],
     0x020: [
-        ("IMD", lambda d: process_can_data(d, 0, 1, signed=False)),
-        ("AMS", lambda d: process_can_data(d, 1, 2, signed=False)),
+        ("diagnostics.imd", lambda d: process_can_data(d, 0, 1, signed=False)),
+        ("diagnostics.ams", lambda d: process_can_data(d, 1, 2, signed=False)),
     ],
     0x220: [
-        ("Voltage", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
-        ("Current", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.01)),
-        ("State of Charge", lambda d: process_can_data(d, 4, 5, signed=True, scale=0.01)),
-        ("Pack Temp Maximum", lambda d: process_can_data(d, 5, 6, signed=True)),
-        ("Pack Temp Minimum", lambda d: process_can_data(d, 6, 7, signed=True)),
+        ("pack.hv_pack_v", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
+        ("pack.hv_c", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.01)),
+        ("diagnostics.hv_charge_state", lambda d: process_can_data(d, 4, 5, signed=True, scale=0.01)),
+        ("thermal.pack_temp_max", lambda d: process_can_data(d, 5, 6, signed=True)),
+        ("thermal.pack_temp_min", lambda d: process_can_data(d, 6, 7, signed=True)),
     ],
     0x420: [
-        ("Contactor Status", lambda d: process_can_data(d, 0, 1, signed=False)),
+        ("pack.contactor_state", lambda d: process_can_data(d, 0, 1, signed=False)),
     ],
     0x230: [
-        ("Volumetric Flow Rate", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.1)),
-        ("Water Temp Motor", lambda d: process_can_data(d, 2, 3, signed=True)),
-        ("Water Temp Inverter", lambda d: process_can_data(d, 3, 4, signed=True)),
-        ("Water Temp Radiator", lambda d: process_can_data(d, 4, 5, signed=True)),
-        ("Radiator Fan RPM Percentage", lambda d: process_can_data(d, 5, 6, signed=True)),
+        ("thermal.flow_rate", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.1)),
+        ("thermal.water_motor_temp", lambda d: process_can_data(d, 2, 3, signed=True)),
+        ("thermal.water_inverter_temp", lambda d: process_can_data(d, 3, 4, signed=True)),
+        ("thermal.water_rad_temp", lambda d: process_can_data(d, 4, 5, signed=True)),
+        ("thermal.rad_fan_rpm", lambda d: process_can_data(d, 5, 6, signed=True)),
     ],
     0x330: [
-        ("LV Voltage", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
-        ("LV State of Charge", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.01)),
-        ("LV Current", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.01)),
+        ("pack.lv_v", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
+        ("diagnostics.lv_charge_state", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.01)),
+        ("pack.lv_c", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.01)),
     ],
     0x340: [
-        ("Front Right Wheel Speed", lambda d: process_can_data(d, 0, 4, signed=True, scale=0.0025)),
+        ("dynamics.frw_speed", lambda d: process_can_data(d, 0, 4, signed=True, scale=0.0025)),
     ],
     0x344: [
-        ("Front Left Wheel Speed", lambda d: process_can_data(d, 0, 4, signed=True, scale=0.0025)),
+        ("dynamics.flw_speed", lambda d: process_can_data(d, 0, 4, signed=True, scale=0.0025)),
     ],
     0x348: [
-        ("Back Right Wheel Speed", lambda d: process_can_data(d, 0, 4, signed=True, scale=0.0025)),
+        ("dynamics.brw_speed", lambda d: process_can_data(d, 0, 4, signed=True, scale=0.0025)),
     ],
     0x34C: [
-        ("Back Left Wheel Speed", lambda d: process_can_data(d, 0, 4, signed=True, scale=0.0025)),
+        ("dynamics.blw_speed", lambda d: process_can_data(d, 0, 4, signed=True, scale=0.0025)),
     ],
     0x221: [
-        ("HVC Acceleration X", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
-        ("HVC Acceleration Y", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.01)),
-        ("HVC Acceleration Z", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.01)),
+        ("dynamics.body2_accel", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
     ],
     0x231: [
-        ("PDU Acceleration X", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
-        ("PDU Acceleration Y", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.01)),
-        ("PDU Acceleration Z", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.01)),
+        ("dynamics.body3_accel", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
     ],
     0x341: [
-        ("Front Right Acceleration X", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
-        ("Front Right Acceleration Y", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.01)),
-        ("Front Right Acceleration Z", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.01)),
+        ("dynamics.frw_accel", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
     ],
     0x345: [
-        ("Front Left Acceleration X", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
-        ("Front Left Acceleration Y", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.01)),
-        ("Front Left Acceleration Z", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.01)),
+        ("dynamics.flw_accel", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
     ],
     0x349: [
-        ("Back Right Acceleration X", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
-        ("Back Right Acceleration Y", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.01)),
-        ("Back Right Acceleration Z", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.01)),
+        ("dynamics.brw_accel", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
     ],
     0x34D: [
-        ("Back Left Acceleration X", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
-        ("Back Left Acceleration Y", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.01)),
-        ("Back Left Acceleration Z", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.01)),
+        ("dynamics.blw_accel", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
     ],
     **{
         i: [
-            ("Cell Voltage Mean", lambda d: process_can_data(d, 0, 2, signed=True, operation='mean')),
-            ("Cell Voltage Max", lambda d: process_can_data(d, 2, 4, signed=True, operation='max')),
-            ("Cell Voltage Min", lambda d: process_can_data(d, 4, 6, signed=True, operation='min')),
+            ("pack.avg_cell_v", lambda d: process_can_data(d, 0, 2, signed=True, operation='mean')),
         ]
         for i in range(0x370, 0x393)
     },
     **{
         i: [
-            ("Cell Temps Mean", lambda d: process_can_data(d, 0, 2, signed=True, operation='mean')),
-            ("Cell Temps Max", lambda d: process_can_data(d, 2, 4, signed=True)),
-            ("Cell Temps Min", lambda d: process_can_data(d, 4, 6, signed=True)),
+            ("pack.avg_cell_temp", lambda d: process_can_data(d, 0, 2, signed=True, operation='mean')),
         ]
         for i in range(0x470, 0x487)
     }, 
-    0x600:[("Latitude", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.001))], 
-    0x601:[("Longitude", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.001))]
+    0x600:[("dynamics.gps", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.001))], 
+    0x601:[("dynamics.gps", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.001))]
 }
 
 # Mapping from server field names to CSV column names
