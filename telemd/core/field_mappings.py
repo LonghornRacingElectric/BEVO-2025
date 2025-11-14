@@ -163,7 +163,9 @@ CAN_MAPPING = {
             ("Cell Temps Min", lambda d: process_can_data(d, 4, 6, signed=True)),
         ]
         for i in range(0x470, 0x487)
-    }
+    }, 
+    0x600:[("Latitude", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.001))], 
+    0x601:[("Longitude", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.001))]
 }
 
 # Mapping from server field names to CSV column names
@@ -223,3 +225,16 @@ CSV_PROTBUF_MAPPING = {
     "flow_rate": "Volumetric Flow Rate"
 }
 
+# Create a reverse mapping from CSV column name to protobuf field name
+CSV_TO_PROTOBUF_MAPPING = {}
+for proto_field, csv_field in CSV_PROTBUF_MAPPING.items():
+    if isinstance(csv_field, list):
+        size = len(csv_field)
+        for i, item in enumerate(csv_field):
+            CSV_TO_PROTOBUF_MAPPING[item] = (proto_field, i, size)
+    else:
+        CSV_TO_PROTOBUF_MAPPING[csv_field] = (proto_field, None, None)
+
+def get_protobuf_field_and_index(csv_field_name):
+    """Get the protobuf field name, index, and size from the CSV field name."""
+    return CSV_TO_PROTOBUF_MAPPING.get(csv_field_name)

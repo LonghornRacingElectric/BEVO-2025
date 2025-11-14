@@ -60,21 +60,50 @@ class TelemetryCache:
         except Exception as e:
             print(f"[WARN] Failed to write odometer to {path}: {e}")
         
-    def update_value(self, can_id, field_name, value):
-        """Cache a telemetry value"""
-        self.cache[field_name] = value
+    def update_value(self, can_id, field_name, value, index=None, size=None):
+        """Cache a telemetry value, handling repeated fields."""
+        if index is not None:
+            # It's a repeated field, store it in a list
+            if field_name not in self.cache:
+                if size is not None:
+                    self.cache[field_name] = [None] * size
+                else:
+                    # Fallback if size is not provided, though it should be
+                    self.cache[field_name] = []
+
+            if index < len(self.cache[field_name]):
+                self.cache[field_name][index] = value
+            else:
+                # Handle cases where index is out of bounds
+                print(f"Warning: index {index} out of bounds for {field_name}")
+        else:
+            # It's a single value field
+            self.cache[field_name] = value
         
     def should_publish(self, current_time):
         """Check if it's time to publish"""
         return current_time - self.last_publish_time >= self.publish_interval
         
     def publish_cached_data(self, current_time):
-        """Publish all cached data to MQTT"""
+        """Publish all complete cached data to MQTT"""
         if not self.cache:
             return
+
+        complete_fields = {}
+        for field_name, value in self.cache.items():
+            if isinstance(value, list):
+                # Check if all elements in the list are not None
+                if all(v is not None for v in value):
+                    complete_fields[field_name] = value
+            else:
+                # It's a single value, so it's always "complete"
+                complete_fields[field_name] = value
         
+        if not complete_fields:
+            return
+
         #! TESTING REQUIRED ||| compute odometer value
-        speed = self.cache.get("dynamics.speed") #! dunno if this is the actual value
+        speed = complete_fields.get("dynamics.speed") #! dunno if this is the actual value
         if speed is not None:
             delta_t = current_time - self.last_publish_time
             self.odometer += speed * delta_t / 1000  # preserve original scaling
@@ -89,15 +118,17 @@ class TelemetryCache:
         telemetry_data = {
             "timestamp": current_time,
             "packet_id": packet_id,
-            "fields": self.cache.copy(),
+            "fields": complete_fields,
         }
         
         # Publish via MQTT (this will increment packet ID after successful publish)
         success = self.mqtt_manager.publish(telemetry_data, publish_msg)
         
         if success:
-            # Clear cache and update timestamp only on successful publish
-            self.cache.clear()
+            # Clear only the published fields from the cache
+            for field_name in complete_fields:
+                del self.cache[field_name]
+
             self.last_publish_time = current_time
             
             print(

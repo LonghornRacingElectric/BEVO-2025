@@ -243,9 +243,27 @@ class LatestValuesCache:
         self.latest_values = {}  # field_name -> (value, timestamp)
         self.last_update_time = time.time()
         
-    def update_value(self, field_name, value):
-        """Update the latest value for a field"""
-        self.latest_values[field_name] = (value, time.time())
+    def update_value(self, field_name, value, index=None, size=None):
+        """Update the latest value for a field, handling repeated fields."""
+        if index is not None:
+            # It's a repeated field, store it in a list
+            if field_name not in self.latest_values or not isinstance(self.latest_values.get(field_name), tuple) or not isinstance(self.latest_values.get(field_name)[0], list):
+                if size is not None:
+                    self.latest_values[field_name] = ([None] * size, time.time())
+                else:
+                    # Fallback if size is not provided
+                    self.latest_values[field_name] = ([], time.time())
+
+            # Ensure we have a list to update
+            current_list, _ = self.latest_values[field_name]
+            if index < len(current_list):
+                current_list[index] = value
+                self.latest_values[field_name] = (current_list, time.time())
+            else:
+                print(f"Warning: index {index} out of bounds for {field_name}")
+        else:
+            # It's a single value field
+            self.latest_values[field_name] = (value, time.time())
         
     def get_latest_values(self):
         """Get all latest values with timestamps"""

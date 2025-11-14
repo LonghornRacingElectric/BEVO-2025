@@ -9,7 +9,7 @@ import json
 from interfaces.interface import CANInterface
 from networking.client import MQTTManager, TelemetryCache
 from data_logging.logger import CSVTimeSeriesLogger, LatestValuesCache
-from core.field_mappings import CAN_MAPPING
+from core.field_mappings import CAN_MAPPING, get_protobuf_field_and_index
 
 # Configuration
 MQTT_PUBLISH_RATE = 0.0000001  # Hz
@@ -61,10 +61,25 @@ async def process_can_messages(latest_values_cache):
                                 for field_name, converter in mapping:
                                     try:
                                         value = converter(msg.data)
-                                        latest_values_cache.update_value(field_name, value)
-                                        telemetry_cache.update_value(can_id, field_name, value)
-                                        time_series_logger.log_value(field_name, value, current_time)
-                                        # print(f"  -> Logged {field_name}: {value}")
+                                        
+                                        # Get the protobuf field name and index, if it exists
+                                        proto_info = get_protobuf_field_and_index(field_name)
+                                        
+                                        if proto_info:
+                                            proto_field, proto_index, proto_size = proto_info
+                                            # Use the protobuf field name for caching for MQTT and WebSocket
+                                            latest_values_cache.update_value(proto_field, value, proto_index, proto_size)
+                                            telemetry_cache.update_value(can_id, proto_field, value, proto_index, proto_size)
+                                            # Log the original field name to the CSV file
+                                            time_series_logger.log_value(field_name, value, current_time)
+                                            # print(f"  -> Logged {proto_field}[{proto_index}]: {value}")
+                                        else:
+                                            # Fallback to the original field name if no mapping is found
+                                            latest_values_cache.update_value(field_name, value)
+                                            telemetry_cache.update_value(can_id, field_name, value)
+                                            time_series_logger.log_value(field_name, value, current_time)
+                                            # print(f"  -> Logged {field_name}: {value}")
+                                            
                                     except Exception as e:
                                         print(f"  -> Error converting {field_name} from CAN 0x{can_id:03X}: {e}")
                                         print(f"  -> Data bytes: {[f'{b:02X}' for b in msg.data]}")
