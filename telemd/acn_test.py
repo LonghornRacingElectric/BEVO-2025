@@ -12,9 +12,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from core.field_mappings import CAN_MAPPING
 from protobuf.interface import publish_msg
 
-MQTT_BROKER = "3.135.193.194"
+MQTT_BROKER = "192.168.1.109"
 MQTT_PORT = 1883
-MQTT_TOPIC = "data"
+MQTT_TOPIC = "angelique"
 
 def make_can_msg(arbitration_id, value, scale=1.0):
     """Creates a CAN message with a scaled value."""
@@ -57,7 +57,7 @@ async def main():
     while True:
         # Generate a random CAN message from the CAN_MAPPING
         try:
-            can_id = random.choice(list(CAN_MAPPING.keys()))
+            can_id = 0x344
             fields = CAN_MAPPING[can_id]
             
             for field_path, parser in fields:
@@ -90,7 +90,7 @@ async def main():
         if now - last_tick >= 0.003:
             if mqtt_connected:
                 publish_msg(
-                    mqtt_client=client, can_buffer=can_buffer, packet_id=packet_id
+                    mqtt_client=client, can_buffer=can_buffer, packet_id=packet_id, topic=MQTT_TOPIC
                 )
                 packet_id += 1
                 print(f"Sent packet {packet_id} with {len(can_buffer)} CAN messages.")

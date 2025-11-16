@@ -5,7 +5,7 @@ from core.field_mappings import CAN_MAPPING
 
 
 def publish_msg(mqtt_client, can_buffer, packet_id, topic="data"):
-    sensor_msg = pb.SensorData()
+    sensor_msg = pb.AngeliqueSensorData()
     print(f"[DEBUG] Processing {len(can_buffer)} CAN messages")
     
     for can_msg in can_buffer:
