@@ -2,7 +2,7 @@ import paho.mqtt.client as mqtt
 import os
 import requests
 import time
-
+from protobuf import publish_msg
 
 class TelemetryCache:
     """Caches telemetry data and publishes at fixed rate"""
@@ -140,7 +140,7 @@ class TelemetryCache:
 class MQTTManager:
     """Manages MQTT connection and publishing"""
     
-    def __init__(self, broker="192.168.1.109", port=1883, topic="data"):
+    def __init__(self, broker="192.168.1.109", port=1883, topic="angelique"):
         self.broker = broker
         self.port = port
         self.topic = topic
@@ -171,8 +171,8 @@ class MQTTManager:
     def _fetch_initial_packet_id(self):
         """Fetch initial packet ID from server (only called once during initialization)"""
         try:
-            res = requests.get("https://lhrelectric.org/webtool/handshake/")
-            self.packet_id = res.json()["last_packet"]
+            #res = requests.get("https://lhrelectric.org/webtool/handshake/")
+            self.packet_id = 0
             print(f"Retrieved initial packet ID: {self.packet_id}")
         except Exception as e:
             print(f"Warning: Could not get handshake data: {e}")
@@ -211,7 +211,7 @@ class MQTTManager:
             from protobuf import generated as pb
             
             # Create protobuf message and populate with telemetry data
-            sensor_msg = pb.SensorData()
+            sensor_msg = pb.AngeliqueSensorData()
             sensor_msg.time = int(telemetry_data.get('timestamp', time.time()) * 1000)
             sensor_msg.packet_id = packet_id
             
@@ -223,7 +223,11 @@ class MQTTManager:
                     parts = field_name.split('.')
                     for part in parts[:-1]:
                         obj = getattr(obj, part)
-                    setattr(obj, parts[-1], value)
+                    if isinstance(value, list):
+                        field = getattr(obj, parts[-1])
+                        field.extend([float(item) for item in value])
+                    else: 
+                        setattr(obj, parts[-1], value)
                     print(f"[DEBUG] Set {field_name} = {value}")
                 except Exception as e:
                     print(f"[WARN] Failed to set {field_name}: {e}")

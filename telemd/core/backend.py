@@ -12,7 +12,7 @@ from data_logging.logger import CSVTimeSeriesLogger, LatestValuesCache
 from core.field_mappings import CAN_MAPPING, get_protobuf_field_and_index
 
 # Configuration
-MQTT_PUBLISH_RATE = 0.0000001  # Hz
+MQTT_PUBLISH_RATE = 100  # Hz
 MQTT_PUBLISH_INTERVAL = 1.0 / MQTT_PUBLISH_RATE  # ~100ms
 
 os.environ["p_id"] = "0"
