@@ -49,7 +49,7 @@ async def process_can_messages(latest_values_cache):
                     for msg in messages:
                         can_id = msg.arbitration_id
                         
-                        if 0x370 <= can_id <= 0x393:
+                        if 0x370 <= can_id <= 0x392:
                             all_vals, avg_val = aggregator.process_voltage(can_id, msg.data)
                             latest_values_cache.update_value("diagnostics.cells_v", all_vals)
                             latest_values_cache.update_value("pack.avg_cell_v", avg_val)
@@ -58,7 +58,7 @@ async def process_can_messages(latest_values_cache):
                             time_series_logger.log_value("diagnostics.cells_v", str(all_vals), current_time)
                             time_series_logger.log_value("pack.avg_cell_v", avg_val, current_time)
                         
-                        elif 0x470 <= can_id <= 0x487:
+                        elif 0x470 <= can_id <= 0x486:
                             all_vals, avg_val = aggregator.process_temperature(can_id, msg.data)
                             latest_values_cache.update_value("thermal.cells_temp", all_vals)
                             latest_values_cache.update_value("pack.avg_cell_temp", avg_val)
