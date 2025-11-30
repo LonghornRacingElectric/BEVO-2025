@@ -1,7 +1,7 @@
 import statistics
 
 # New conversion function to handle different operations
-def process_can_data(data, start, end, signed=False, scale=1.0, operation='none', fallback=0.0):
+def process_can_data(data, start, end, signed=False, scale=1.0, operation='none', chunk_size=None, fallback=0.0):
     """
     Safely convert bytes to a value with a specified operation.
     Operations:
@@ -9,6 +9,7 @@ def process_can_data(data, start, end, signed=False, scale=1.0, operation='none'
     - 'mean', 'max', 'min': Treat each byte in the slice as a separate value
       and perform the specified operation. This is based on the interpretation
       that these operations apply to the byte values themselves.
+      If chunk_size is specified, the operation is performed on multi-byte chunks.
     """
     try:
         if start >= len(data) or end > len(data):
@@ -19,12 +20,19 @@ def process_can_data(data, start, end, signed=False, scale=1.0, operation='none'
             return fallback
 
         if operation in ['mean', 'max', 'min']:
-            # Assumption: operation is on individual bytes in the slice.
-            if signed:
-                # Convert each byte to a signed integer
-                values = [int.from_bytes([b], 'little', signed=True) for b in byte_slice]
+            values = []
+            if chunk_size:
+                if len(byte_slice) % chunk_size != 0:
+                    return fallback
+                for i in range(0, len(byte_slice), chunk_size):
+                    chunk = byte_slice[i:i+chunk_size]
+                    values.append(int.from_bytes(chunk, 'little', signed=signed))
             else:
-                values = list(byte_slice)
+                # Original behavior: operation on individual bytes
+                if signed:
+                    values = [int.from_bytes([b], 'little', signed=True) for b in byte_slice]
+                else:
+                    values = list(byte_slice)
             
             if not values:
                 return fallback
@@ -47,49 +55,50 @@ def process_can_data(data, start, end, signed=False, scale=1.0, operation='none'
 
 CAN_MAPPING = {
     0x0A0: [
-        ("thermal.inverter_temp", lambda d: process_can_data(d, 0, 2, signed=True, operation='mean')),
+        ("thermal.inverter_temp", lambda d: process_can_data(d, 0, 6, signed=True, operation='mean', chunk_size=2)),
     ],
     0x0A2: [
-        ("thermal.motor_temp", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.1)),
+        ("thermal.motor_temp", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.1)),
     ],
     0x0A5: [
-        ("dynamics.motor_angle", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.1)),
+        # ("dynamics.motor_angle", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.1)), // not sending in protobuf template but data available
         ("dynamics.inverter_rpm", lambda d: process_can_data(d, 2, 4, signed=True)),
-        ("dynamics.inverter_frequency", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.1)),
-        ("dynamics.resolver_angle", lambda d: process_can_data(d, 6, 8, signed=True, scale=0.1)),
+        # ("dynamics.inverter_frequency", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.1)),
+        # ("dynamics.resolver_angle", lambda d: process_can_data(d, 6, 8, signed=True, scale=0.1)),
     ],
     0x0A6: [
-        ("dynamics.phase_a_current", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.1)),
-        ("dynamics.phase_b_current", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.1)),
-        ("dynamics.phase_c_current", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.1)),
-        ("pack.hv_c", lambda d: process_can_data(d, 6, 8, signed=True, scale=0.1)),
+        # ("dynamics.phase_a_current", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.1)),
+        # ("dynamics.phase_b_current", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.1)),
+        # ("dynamics.phase_c_current", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.1)),
+        ("dynamics.inverter_c", lambda d: process_can_data(d, 6, 8, signed=True, scale=0.1)),
     ],
     0x0A7: [
-        ("pack.hv_tractive_v", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.1)),
-        ("dynamics.output_voltage", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.1)),
-        ("dynamics.ab_voltage", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.1)),
-        ("dynamics.bc_voltage", lambda d: process_can_data(d, 6, 8, signed=True, scale=0.1)),
+        ("dynamics.inverter_v", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.1)),
+        # ("dynamics.output_voltage", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.1)),
+        # ("dynamics.ab_voltage", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.1)),
+        # ("dynamics.bc_voltage", lambda d: process_can_data(d, 6, 8, signed=True, scale=0.1)),
     ],
-    0x0AA: [
-        ("controls.vcu_flags", lambda d: process_can_data(d, 0, 8, signed=False)),
-    ],
-    0x0AB: [
-        ("diagnostics.current_errors", lambda d: process_can_data(d, 0, 8, signed=False)),
-    ],
+    # Telemetry unused with flag data and error data
+    # 0x0AA: [
+    #     ("controls.vcu_flags", lambda d: process_can_data(d, 0, 8, signed=False)),
+    # ],
+    # 0x0AB: [
+    #     ("diagnostics.current_errors", lambda d: process_can_data(d, 0, 8, signed=False)),
+    # ],
     0x0AC: [
         ("dynamics.torque_request", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.1)),
         ("dynamics.inverter_torque", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.1)),
     ],
-    0x020: [
-        ("diagnostics.imd", lambda d: process_can_data(d, 0, 1, signed=False)),
-        ("diagnostics.ams", lambda d: process_can_data(d, 1, 2, signed=False)),
-    ],
+    # 0x020: [
+    #     ("diagnostics.imd", lambda d: process_can_data(d, 0, 1, signed=False)),
+    #     ("diagnostics.ams", lambda d: process_can_data(d, 1, 2, signed=False)),
+    # ],
     0x220: [
-        ("pack.hv_pack_v", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
+        ("pack.hv_pack_v", lambda d: process_can_data(d, 0, 2, signed=False, scale=0.01)),
         ("pack.hv_c", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.01)),
-        ("diagnostics.hv_charge_state", lambda d: process_can_data(d, 4, 5, signed=True, scale=0.01)),
-        ("thermal.pack_temp_max", lambda d: process_can_data(d, 5, 6, signed=True)),
-        ("thermal.pack_temp_min", lambda d: process_can_data(d, 6, 7, signed=True)),
+        ("diagnostics.hv_charge_state", lambda d: process_can_data(d, 4, 6, signed=False, scale=0.01)),
+        ("thermal.pack_temp_max", lambda d: process_can_data(d, 6, 7, signed=False)),
+        ("thermal.pack_temp_min", lambda d: process_can_data(d, 7, 8, signed=False)),
     ],
     0x420: [
         ("pack.contactor_state", lambda d: process_can_data(d, 0, 1, signed=False)),
@@ -103,20 +112,20 @@ CAN_MAPPING = {
     ],
     0x330: [
         ("pack.lv_v", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
-        ("diagnostics.lv_charge_state", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.01)),
+        ("diagnostics.lv_charge_state", lambda d: process_can_data(d, 2, 4, signed=False, scale=0.01)),
         ("pack.lv_c", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.01)),
     ],
     0x340: [
-        ("dynamics.frw_speed", lambda d: process_can_data(d, 0, 4, signed=True, scale=0.0025)),
+        ("dynamics.frw_speed", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.0025)),
     ],
     0x344: [
-        ("dynamics.flw_speed", lambda d: process_can_data(d, 0, 4, signed=True, scale=0.0025)),
+        ("dynamics.flw_speed", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.0025)),
     ],
     0x348: [
-        ("dynamics.brw_speed", lambda d: process_can_data(d, 0, 4, signed=True, scale=0.0025)),
+        ("dynamics.brw_speed", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.0025)),
     ],
     0x34C: [
-        ("dynamics.blw_speed", lambda d: process_can_data(d, 0, 4, signed=True, scale=10000)),
+        ("dynamics.blw_speed", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.0025)),
     ],
     0x221: [
         ("HVC Acceleration X", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
@@ -148,21 +157,37 @@ CAN_MAPPING = {
         ("Back Left Acceleration Y", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.01)),
         ("Back Left Acceleration Z", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.01)),
     ],
-    **{
-        i: [
-            ("pack.avg_cell_v", lambda d: process_can_data(d, 0, 2, signed=True, operation='mean')),
-        ]
-        for i in range(0x370, 0x393)
-    },
-    **{
-        i: [
-            ("pack.avg_cell_temp", lambda d: process_can_data(d, 0, 2, signed=True, operation='mean')),
-        ]
-        for i in range(0x470, 0x487)
-    }, 
-    0x600:[("dynamics.gps", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.001))], 
-    0x601:[("dynamics.gps", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.001))]
+    0x600:[("Latitude", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.001))], # unpack csv name to protobuf
+    0x601:[("Longitude", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.001))]
 }
+
+class CellDataAggregator:
+    """A stateful class to aggregate and average cell voltage and temperature data."""
+    def __init__(self):
+        self.voltages = {}
+        self.temperatures = {}
+
+    def _parse_data(self, data):
+        """Parses an 8-byte payload into 4 signed 16-bit integers."""
+        values = []
+        for i in range(0, 8, 2):
+            val = int.from_bytes(data[i:i+2], 'little', signed=False)
+            values.append(val)
+        return values
+
+    def process_voltage(self, can_id, data):
+        """Processes a voltage CAN message, updates state, and returns aggregated data."""
+        self.voltages[can_id] = self._parse_data(data)
+        all_voltages = [v * 0.0001 for id_vals in self.voltages.values() for v in id_vals]
+        avg_voltage = statistics.mean(all_voltages) if all_voltages else 0.0
+        return all_voltages, avg_voltage
+
+    def process_temperature(self, can_id, data):
+        """Processes a temperature CAN message, updates state, and returns aggregated data."""
+        self.temperatures[can_id] = self._parse_data(data)
+        all_temps = [int(t * 0.1) for id_vals in self.temperatures.values() for t in id_vals]
+        avg_temp = statistics.mean(all_temps) if all_temps else 0.0
+        return all_temps, avg_temp
 
 # Mapping from server field names to CSV column names
 

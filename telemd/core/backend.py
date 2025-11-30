@@ -4,19 +4,19 @@ from websockets.exceptions import ConnectionClosedOK
 import time
 import os
 import json
+import statistics
 
 # Import our modular components
 from interfaces.interface import CANInterface
 from networking.client import MQTTManager, TelemetryCache
 from data_logging.logger import CSVTimeSeriesLogger, LatestValuesCache
-from core.field_mappings import CAN_MAPPING, get_protobuf_field_and_index
+from core.field_mappings import CAN_MAPPING, get_protobuf_field_and_index, CellDataAggregator
 
 # Configuration
 MQTT_PUBLISH_RATE = 100  # Hz
 MQTT_PUBLISH_INTERVAL = 1.0 / MQTT_PUBLISH_RATE  # ~100ms
 
 os.environ["p_id"] = "0"
-
 
 async def process_can_messages(latest_values_cache):
     """Process CAN messages independently of WebSocket connections"""
@@ -25,6 +25,7 @@ async def process_can_messages(latest_values_cache):
     mqtt_manager = MQTTManager()
     telemetry_cache = TelemetryCache(mqtt_manager, MQTT_PUBLISH_INTERVAL)
     time_series_logger = CSVTimeSeriesLogger()
+    aggregator = CellDataAggregator()
     
     # Initialize connections
     can_interface.initialize()
@@ -46,13 +47,28 @@ async def process_can_messages(latest_values_cache):
                     messages = msg_or_msgs if isinstance(msg_or_msgs, list) else [msg_or_msgs]
                     
                     for msg in messages:
-                        # Process CAN message with direct lookup
                         can_id = msg.arbitration_id
-                        # print(f"  -> Received CAN 0x{can_id:03X}: {[f'{b:02X}' for b in msg.data]}")
                         
-                        if can_id in CAN_MAPPING:
+                        if 0x370 <= can_id <= 0x393:
+                            all_vals, avg_val = aggregator.process_voltage(can_id, msg.data)
+                            latest_values_cache.update_value("diagnostics.cells_v", all_vals)
+                            latest_values_cache.update_value("pack.avg_cell_v", avg_val)
+                            telemetry_cache.update_value(can_id, "diagnostics.cells_v", all_vals)
+                            telemetry_cache.update_value(can_id, "pack.avg_cell_v", avg_val)
+                            time_series_logger.log_value("diagnostics.cells_v", str(all_vals), current_time)
+                            time_series_logger.log_value("pack.avg_cell_v", avg_val, current_time)
+                        
+                        elif 0x470 <= can_id <= 0x487:
+                            all_vals, avg_val = aggregator.process_temperature(can_id, msg.data)
+                            latest_values_cache.update_value("thermal.cells_temp", all_vals)
+                            latest_values_cache.update_value("pack.avg_cell_temp", avg_val)
+                            telemetry_cache.update_value(can_id, "thermal.cells_temp", all_vals)
+                            telemetry_cache.update_value(can_id, "pack.avg_cell_temp", avg_val)
+                            time_series_logger.log_value("thermal.cells_temp", str(all_vals), current_time)
+                            time_series_logger.log_value("pack.avg_cell_temp", avg_val, current_time)
+
+                        elif can_id in CAN_MAPPING:
                             mapping = CAN_MAPPING[can_id]
-                            
                             # Normalize mapping to always be a list of tuples
                             if isinstance(mapping, tuple):
                                 mapping = [mapping]
@@ -61,7 +77,6 @@ async def process_can_messages(latest_values_cache):
                                 for field_name, converter in mapping:
                                     try:
                                         value = converter(msg.data)
-                                        
                                         # Get the protobuf field name and index, if it exists
                                         proto_info = get_protobuf_field_and_index(field_name)
                                         
@@ -70,7 +85,6 @@ async def process_can_messages(latest_values_cache):
                                             # Use the protobuf field name for caching for MQTT and WebSocket
                                             latest_values_cache.update_value(proto_field, value, proto_index, proto_size)
                                             telemetry_cache.update_value(can_id, proto_field, value, proto_index, proto_size)
-                                            # Log the original field name to the CSV file
                                             time_series_logger.log_value(field_name, value, current_time)
                                             # print(f"  -> Logged {proto_field}[{proto_index}]: {value}")
                                         else:
