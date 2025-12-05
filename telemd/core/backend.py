@@ -24,7 +24,7 @@ async def process_can_messages(latest_values_cache):
     can_interface = CANInterface()
     mqtt_manager = MQTTManager()
     telemetry_cache = TelemetryCache(mqtt_manager, MQTT_PUBLISH_INTERVAL)
-    time_series_logger = CSVTimeSeriesLogger()
+    # time_series_logger = CSVTimeSeriesLogger()
     aggregator = CellDataAggregator()
     
     # Initialize connections
@@ -55,8 +55,8 @@ async def process_can_messages(latest_values_cache):
                             latest_values_cache.update_value("pack.avg_cell_v", avg_val)
                             telemetry_cache.update_value(can_id, "diagnostics.cells_v", all_vals)
                             telemetry_cache.update_value(can_id, "pack.avg_cell_v", avg_val)
-                            time_series_logger.log_value("diagnostics.cells_v", str(all_vals), current_time)
-                            time_series_logger.log_value("pack.avg_cell_v", avg_val, current_time)
+                            # time_series_logger.log_value("diagnostics.cells_v", str(all_vals), current_time)
+                            # time_series_logger.log_value("pack.avg_cell_v", avg_val, current_time)
                         
                         elif 0x470 <= can_id <= 0x486:
                             all_vals, avg_val = aggregator.process_temperature(can_id, msg.data)
@@ -64,8 +64,8 @@ async def process_can_messages(latest_values_cache):
                             latest_values_cache.update_value("pack.avg_cell_temp", avg_val)
                             telemetry_cache.update_value(can_id, "thermal.cells_temp", all_vals)
                             telemetry_cache.update_value(can_id, "pack.avg_cell_temp", avg_val)
-                            time_series_logger.log_value("thermal.cells_temp", str(all_vals), current_time)
-                            time_series_logger.log_value("pack.avg_cell_temp", avg_val, current_time)
+                            #time_series_logger.log_value("thermal.cells_temp", str(all_vals), current_time)
+                            #time_series_logger.log_value("pack.avg_cell_temp", avg_val, current_time)
 
                         elif can_id in CAN_MAPPING:
                             mapping = CAN_MAPPING[can_id]
@@ -85,13 +85,13 @@ async def process_can_messages(latest_values_cache):
                                             # Use the protobuf field name for caching for MQTT and WebSocket
                                             latest_values_cache.update_value(proto_field, value, proto_index, proto_size)
                                             telemetry_cache.update_value(can_id, proto_field, value, proto_index, proto_size)
-                                            time_series_logger.log_value(field_name, value, current_time)
+                                            # time_series_logger.log_value(field_name, value, current_time)
                                             # print(f"  -> Logged {proto_field}[{proto_index}]: {value}")
                                         else:
                                             # Fallback to the original field name if no mapping is found
                                             latest_values_cache.update_value(field_name, value)
                                             telemetry_cache.update_value(can_id, field_name, value)
-                                            time_series_logger.log_value(field_name, value, current_time)
+                                            # time_series_logger.log_value(field_name, value, current_time)
                                             # print(f"  -> Logged {field_name}: {value}")
                                             
                                     except Exception as e:
@@ -123,12 +123,12 @@ async def process_can_messages(latest_values_cache):
     except KeyboardInterrupt:
         print("Stopping CAN processing.")
         # Print final summary and shutdown
-        latest_values_cache.print_summary()
+        #latest_values_cache.print_summary()
         telemetry_cache.publish_cached_data(time.time())
         time_series_logger.shutdown()
     finally:
         print("Shutting down CAN processing components...")
-        time_series_logger.shutdown()  # Ensure CSV logger flushes its buffer
+        # time_series_logger.shutdown()  # Ensure CSV logger flushes its buffer
         can_interface.shutdown()
         mqtt_manager.shutdown()
 
