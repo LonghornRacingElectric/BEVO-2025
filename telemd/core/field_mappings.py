@@ -85,7 +85,11 @@ CAN_MAPPING = {
     # 0x0AB: [
     #     ("diagnostics.current_errors", lambda d: process_can_data(d, 0, 8, signed=False)),
     # ],
-    0x0AC: [
+    # 0x0AC: [
+    #     #("dynamics.torque_request", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.1)),
+    #     ("dynamics.inverter_torque", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.1)),
+    # ],
+    0x0C0: [
         ("dynamics.torque_request", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.1)),
         ("dynamics.inverter_torque", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.1)),
     ],
@@ -132,10 +136,20 @@ CAN_MAPPING = {
         ("HVC Acceleration Y", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.01)),
         ("HVC Acceleration Z", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.01)),
     ],
+    0x222:[
+        ("HVC Gyro X", lambda d: process_can_data(d, 0, 2, signed=True, scale = 0.01)),
+        ("HVC Gyro Y", lambda d: process_can_data(d, 2, 4, signed=True, scale = 0.01)),
+        ("HVC Gyro Z", lambda d: process_can_data(d, 4, 6, signed=True, scale = 0.01)),
+    ],
     0x231: [
         ("PDU Acceleration X", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
         ("PDU Acceleration Y", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.01)),
         ("PDU Acceleration Z", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.01)),
+    ],
+    0x232:[
+        ("PDU Gyro X", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
+        ("PDU Gyro Y", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.01)),
+        ("PDU Gyro Z", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.01)),
     ],
     0x341: [
         ("Front Right Acceleration X", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.01)),
