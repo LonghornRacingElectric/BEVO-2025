@@ -39,7 +39,7 @@ class TelemetryCache:
             return 0.0
         except Exception as e:
             # Corrupt/invalid content, log and continue with 0.0
-            print(f"[WARN] Failed to read odometer from {path}: {e}. Defaulting to 0.0")
+            # print(f"[WARN] Failed to read odometer from {path}: {e}. Defaulting to 0.0")
             return 0.0
 
     def _save_odometer(self):
@@ -88,6 +88,7 @@ class TelemetryCache:
         if not self.cache:
             return
 
+        print(f"[DEBUG] Cache before filtering: {self.cache}")
         complete_fields = {}
         for field_name, value in self.cache.items():
             if isinstance(value, list):
@@ -98,6 +99,7 @@ class TelemetryCache:
                 # It's a single value, so it's always "complete"
                 complete_fields[field_name] = value
         
+        print(f"[DEBUG] Complete fields: {complete_fields}")
         if not complete_fields:
             return
 
@@ -130,9 +132,9 @@ class TelemetryCache:
 
             self.last_publish_time = current_time
             
-            print(
-                f"Published {len(telemetry_data['fields'])} fields to MQTT (packet {packet_id})"
-            )
+            # print(
+            #     f"Published {len(telemetry_data['fields'])} fields to MQTT (packet {packet_id})"
+            # )
         else:
             print(f"Failed to publish packet {packet_id}, will retry next cycle")
 
@@ -242,10 +244,10 @@ class MQTTManager:
             # print(f"[DEBUG] MQTT publish message ID: {result.mid}")
             
             if result.rc == 0:
-                print(f"[MQTT] Successfully published protobuf message ({len(payload)} bytes) to topic '{self.topic}'")
+                # print(f"[MQTT] Successfully published protobuf message ({len(payload)} bytes) to topic '{self.topic}'")
                 # Only increment packet ID after successful publish
                 self.increment_packet_id()
-                print(f"Successfully published packet {packet_id}")
+                # print(f"Successfully published packet {packet_id}")
                 return True
             else:
                 print(f"[ERROR] MQTT publish failed with return code: {result.rc}")
