@@ -88,7 +88,6 @@ class TelemetryCache:
         if not self.cache:
             return
 
-        print(f"[DEBUG] Cache before filtering: {self.cache}")
         complete_fields = {}
         for field_name, value in self.cache.items():
             if isinstance(value, list):
@@ -99,12 +98,11 @@ class TelemetryCache:
                 # It's a single value, so it's always "complete"
                 complete_fields[field_name] = value
         
-        print(f"[DEBUG] Complete fields: {complete_fields}")
         if not complete_fields:
             return
 
         #! TESTING REQUIRED ||| compute odometer value
-        speed = complete_fields.get("dynamics.speed") #! dunno if this is the actual value
+        speed = complete_fields.get("dynamics.blw_speed") #! dunno if this is the actual value
         if speed is not None:
             delta_t = current_time - self.last_publish_time
             self.odometer += speed * delta_t / 1000  # preserve original scaling
