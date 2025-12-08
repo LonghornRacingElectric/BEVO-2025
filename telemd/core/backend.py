@@ -13,7 +13,7 @@ from data_logging.logger import CSVTimeSeriesLogger, LatestValuesCache
 from core.field_mappings import CAN_MAPPING, get_protobuf_field_and_index, CellDataAggregator
 
 # Configuration
-MQTT_PUBLISH_RATE = 100  # Hz
+MQTT_PUBLISH_RATE = 5  # Hz
 MQTT_PUBLISH_INTERVAL = 1.0 / MQTT_PUBLISH_RATE  # ~100ms
 
 os.environ["p_id"] = "0"
@@ -48,9 +48,6 @@ async def process_can_messages(latest_values_cache):
                     
                     for msg in messages:
                         can_id = msg.arbitration_id
-                        print(f"Processing CAN ID: 0x{can_id:03X}")
-                        if (can_id == 0x600):
-                            print ("recieved_lolllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll")
                         
                         if 0x370 <= can_id <= 0x392:
                             all_vals, avg_val = aggregator.process_voltage(can_id, msg.data)

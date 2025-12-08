@@ -223,12 +223,29 @@ class MQTTManager:
                     parts = field_name.split('.')
                     for part in parts[:-1]:
                         obj = getattr(obj, part)
+                    
+                    field_name_on_obj = parts[-1]
+                    field_descriptor = obj.DESCRIPTOR.fields_by_name[field_name_on_obj]
+                    is_integer_field = field_descriptor.type in [
+                        field_descriptor.TYPE_INT32, field_descriptor.TYPE_INT64,
+                        field_descriptor.TYPE_UINT32, field_descriptor.TYPE_UINT64,
+                        field_descriptor.TYPE_SINT32, field_descriptor.TYPE_SINT64,
+                        field_descriptor.TYPE_FIXED32, field_descriptor.TYPE_FIXED64,
+                        field_descriptor.TYPE_SFIXED32, field_descriptor.TYPE_SFIXED64
+                    ]
+                    
                     if isinstance(value, list):
-                        field = getattr(obj, parts[-1])
-                        field.extend([float(item) for item in value])
+                        field = getattr(obj, field_name_on_obj)
+                        if is_integer_field:
+                            field.extend([int(item) for item in value if item is not None])
+                        else:
+                            field.extend([float(item) for item in value if item is not None])
                     else: 
-                        setattr(obj, parts[-1], value)
-                    print(f"[DEBUG] Set {field_name} = {value}")
+                        if is_integer_field:
+                            setattr(obj, field_name_on_obj, int(value))
+                        else:
+                            setattr(obj, field_name_on_obj, float(value))
+
                 except Exception as e:
                     print(f"[WARN] Failed to set {field_name}: {e}")
             
