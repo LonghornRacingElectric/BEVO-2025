@@ -13,7 +13,7 @@ from data_logging.logger import CSVTimeSeriesLogger, LatestValuesCache
 from core.field_mappings import CAN_MAPPING, get_protobuf_field_and_index, CellDataAggregator
 
 # Configuration
-MQTT_PUBLISH_RATE = 5  # Hz
+MQTT_PUBLISH_RATE = 10  # Hz
 MQTT_PUBLISH_INTERVAL = 1.0 / MQTT_PUBLISH_RATE  # ~100ms
 
 os.environ["p_id"] = "0"
@@ -100,8 +100,8 @@ async def process_can_messages(latest_values_cache):
                             except Exception as e:
                                 print(f"  -> Error processing CAN 0x{can_id:03X}: {e}")
                                 print(f"  -> Data bytes: {[f'{b:02X}' for b in msg.data]}")
-                        else:
-                            print(f"  -> No mapping found for CAN ID 0x{can_id:03X}")
+                       # else:
+                            #print(f"  -> No mapping found for CAN ID 0x{can_id:03X}")
                 else:
                     # Print a message every 10 seconds to show the system is running
                     if int(current_time) % 10 == 0 and int(current_time) != int(time.time() - 0.01):
