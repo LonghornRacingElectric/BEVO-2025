@@ -172,8 +172,8 @@ CAN_MAPPING = {
         ("Back Left Acceleration Z", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.01)),
     ],
     0x600:[
-        ("Latitude", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.001)), 
-        ("Longitude", lambda d: process_can_data(d, 2, 4, signed=True, scale=0.001)),
+        ("Latitude", lambda d: process_can_data(d, 0, 4, signed=True, scale=0.001)), 
+        ("Longitude", lambda d: process_can_data(d, 4, 8, signed=True, scale=0.001)),
            ], # unpack csv name to protobuf
     #0x601:[("Longitude", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.001))]
 }
