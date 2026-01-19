@@ -15,7 +15,7 @@ class TelemetryCache:
         self.publish_interval = publish_interval
         self.lock = threading.Lock()
         # Initialize odometer value from file at root of telemd folder
-        self.odometer = self._load_odometer()
+        # self.odometer = self._load_odometer()
 
     # -------------------------
     # Odometer persistence
