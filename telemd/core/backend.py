@@ -13,7 +13,7 @@ from data_logging.logger import CSVTimeSeriesLogger, LatestValuesCache
 from core.field_mappings import CAN_MAPPING, get_protobuf_field_and_index, CellDataAggregator
 
 # Configuration
-MQTT_PUBLISH_RATE = 5  # Hz
+MQTT_PUBLISH_RATE = 10  # Hz
 MQTT_PUBLISH_INTERVAL = 1.0 / MQTT_PUBLISH_RATE  # ~100ms
 
 os.environ["p_id"] = "0"
@@ -36,10 +36,18 @@ async def process_can_messages(latest_values_cache):
     #     f"Starting CAN message processing with {MQTT_PUBLISH_RATE}Hz MQTT publishing..."
     # )
     
+    publish_lock = asyncio.Lock()
+
+    async def _publish_cached(current_time):
+        async with publish_lock:
+            await asyncio.to_thread(telemetry_cache.publish_cached_data, current_time)
+
     try:
         while True:
             try:
-                msg_or_msgs = can_interface.recv(timeout=0.01)
+                # Offload potentially blocking CAN recv to a thread to avoid
+                # stalling the asyncio event loop.
+                msg_or_msgs = await asyncio.to_thread(can_interface.recv, 0.01)
                 current_time = time.time()
                 
                 if msg_or_msgs:
@@ -100,16 +108,16 @@ async def process_can_messages(latest_values_cache):
                             except Exception as e:
                                 print(f"  -> Error processing CAN 0x{can_id:03X}: {e}")
                                 print(f"  -> Data bytes: {[f'{b:02X}' for b in msg.data]}")
-                        else:
-                            print(f"  -> No mapping found for CAN ID 0x{can_id:03X}")
+                        # else:
+                        #     prinit(f"  -> No mapping found for CAN ID 0x{can_id:03X}")
                 else:
                     # Print a message every 10 seconds to show the system is running
                     if int(current_time) % 10 == 0 and int(current_time) != int(time.time() - 0.01):
                         print("Waiting for CAN messages...")
                 
                 # Check if it's time to publish cached data to MQTT
-                if telemetry_cache.should_publish(current_time):
-                    telemetry_cache.publish_cached_data(current_time)
+                if telemetry_cache.should_publish(current_time) and not publish_lock.locked():
+                    asyncio.create_task(_publish_cached(current_time))
                 
                 # Print summary every 5 seconds
                 if current_time - latest_values_cache.last_update_time >= 5.0:
