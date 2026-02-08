@@ -177,7 +177,7 @@ class MQTTManager:
             res = requests.get("https://lhrelectric.org/api/handshake") # defaults to angelique here
             res.raise_for_status()
             data = res.json()
-            p_id = data.get("packet_id")
+            p_id = data.get("last_packet")
             if p_id is not None:
                 self.packet_id = p_id
                 print(f"Retrieved initial packet ID: {self.packet_id}")
