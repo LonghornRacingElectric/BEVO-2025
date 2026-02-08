@@ -6,6 +6,7 @@ import os
 import json
 import statistics
 from typing import Optional
+import requests
 
 # Import our modular components
 from interfaces.interface import CANInterface
@@ -17,13 +18,36 @@ from core.field_mappings import CAN_MAPPING, get_protobuf_field_and_index, CellD
 MQTT_PUBLISH_RATE = 10  # Hz
 MQTT_PUBLISH_INTERVAL = 1.0 / MQTT_PUBLISH_RATE  # ~100ms
 
-os.environ["p_id"] = "0"
+def set_packet_id():
+    """Fetches packet ID from the handshake API and sets the environment variable."""
+    try:
+        response = requests.get("https://lhrelectric.org/api/handshake", timeout=5)
+        response.raise_for_status()  # Raise an exception for bad status codes
+        p_id = response.json().get("packet_id")
+        
+        if p_id is not None:
+            print(f"Successfully fetched packet ID: {p_id}")
+            os.environ["p_id"] = str(p_id)
+        else:
+            print("Handshake successful, but 'p_id' not found in response. Using default '0'.")
+            os.environ["p_id"] = "0"
+            
+    except requests.exceptions.RequestException as e:
+        print(f"Failed to connect to handshake API: {e}. Using default packet ID '0'.")
+        os.environ["p_id"] = "0"
+    except ValueError: # Catches JSON decoding errors
+        print("Failed to decode handshake response. Using default packet ID '0'.")
+        os.environ["p_id"] = "0"
+
+# Set the packet ID on startup
+set_packet_id()
+
 
 async def process_can_messages(latest_values_cache: Optional[LatestValuesCache] = None):
     """Process CAN messages independently of WebSocket connections"""
     # Initialize components
     can_interface = CANInterface()
-    mqtt_manager = MQTTManager()
+    mqtt_manager = MQTTManager(p)
     telemetry_cache = TelemetryCache(mqtt_manager, MQTT_PUBLISH_INTERVAL)
     # time_series_logger = CSVTimeSeriesLogger()
     aggregator = CellDataAggregator()

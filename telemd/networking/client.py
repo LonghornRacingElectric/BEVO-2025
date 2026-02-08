@@ -174,9 +174,16 @@ class MQTTManager:
     def _fetch_initial_packet_id(self):
         """Fetch initial packet ID from server (only called once during initialization)"""
         try:
-            #res = requests.get("https://lhrelectric.org/webtool/handshake/")
-            self.packet_id = 0
-            print(f"Retrieved initial packet ID: {self.packet_id}")
+            res = requests.get("https://lhrelectric.org/api/handshake") # defaults to angelique here
+            res.raise_for_status()
+            data = res.json()
+            p_id = data.get("packet_id")
+            if p_id is not None:
+                self.packet_id = p_id
+                print(f"Retrieved initial packet ID: {self.packet_id}")
+            else:
+                self.packet_id = 0
+                print(f"Using default packet ID: 0: {self.packet_id}")
         except Exception as e:
             print(f"Warning: Could not get handshake data: {e}")
             print("Using default packet ID: 0")
