@@ -5,6 +5,7 @@ import time
 import os
 import json
 import statistics
+from typing import Optional
 
 # Import our modular components
 from interfaces.interface import CANInterface
@@ -18,7 +19,7 @@ MQTT_PUBLISH_INTERVAL = 1.0 / MQTT_PUBLISH_RATE  # ~100ms
 
 os.environ["p_id"] = "0"
 
-async def process_can_messages(latest_values_cache):
+async def process_can_messages(latest_values_cache: Optional[LatestValuesCache] = None):
     """Process CAN messages independently of WebSocket connections"""
     # Initialize components
     can_interface = CANInterface()
@@ -59,8 +60,8 @@ async def process_can_messages(latest_values_cache):
                         
                         if 0x370 <= can_id <= 0x392:
                             all_vals, avg_val = aggregator.process_voltage(can_id, msg.data)
-                            latest_values_cache.update_value("diagnostics.cells_v", all_vals)
-                            latest_values_cache.update_value("pack.avg_cell_v", avg_val)
+                            # latest_values_cache.update_value("diagnostics.cells_v", all_vals)
+                            # latest_values_cache.update_value("pack.avg_cell_v", avg_val)
                             telemetry_cache.update_value(can_id, "diagnostics.cells_v", all_vals)
                             telemetry_cache.update_value(can_id, "pack.avg_cell_v", avg_val)
                             # time_series_logger.log_value("diagnostics.cells_v", str(all_vals), current_time)
@@ -68,8 +69,8 @@ async def process_can_messages(latest_values_cache):
                         
                         elif 0x470 <= can_id <= 0x486:
                             all_vals, avg_val = aggregator.process_temperature(can_id, msg.data)
-                            latest_values_cache.update_value("thermal.cells_temp", all_vals)
-                            latest_values_cache.update_value("pack.avg_cell_temp", avg_val)
+                            # latest_values_cache.update_value("thermal.cells_temp", all_vals)
+                            # latest_values_cache.update_value("pack.avg_cell_temp", avg_val)
                             telemetry_cache.update_value(can_id, "thermal.cells_temp", all_vals)
                             telemetry_cache.update_value(can_id, "pack.avg_cell_temp", avg_val)
                             #time_series_logger.log_value("thermal.cells_temp", str(all_vals), current_time)
@@ -91,13 +92,13 @@ async def process_can_messages(latest_values_cache):
                                         if proto_info:
                                             proto_field, proto_index, proto_size = proto_info
                                             # Use the protobuf field name for caching for MQTT and WebSocket
-                                            latest_values_cache.update_value(proto_field, value, proto_index, proto_size)
+                                            # latest_values_cache.update_value(proto_field, value, proto_index, proto_size)
                                             telemetry_cache.update_value(can_id, proto_field, value, proto_index, proto_size)
                                             # time_series_logger.log_value(field_name, value, current_time)
                                             # print(f"  -> Logged {proto_field}[{proto_index}]: {value}")
                                         else:
                                             # Fallback to the original field name if no mapping is found
-                                            latest_values_cache.update_value(field_name, value)
+                                            # latest_values_cache.update_value(field_name, value)
                                             telemetry_cache.update_value(can_id, field_name, value)
                                             # time_series_logger.log_value(field_name, value, current_time)
                                             # print(f"  -> Logged {field_name}: {value}")
@@ -120,9 +121,9 @@ async def process_can_messages(latest_values_cache):
                     asyncio.create_task(_publish_cached(current_time))
                 
                 # Print summary every 5 seconds
-                if current_time - latest_values_cache.last_update_time >= 5.0:
-                    latest_values_cache.print_summary()
-                    latest_values_cache.last_update_time = current_time
+                # if current_time - latest_values_cache.last_update_time >= 5.0:
+                #     latest_values_cache.print_summary()
+                #     latest_values_cache.last_update_time = current_time
                 
                 # Small delay to prevent blocking the event loop
                 await asyncio.sleep(0.001)
@@ -133,7 +134,7 @@ async def process_can_messages(latest_values_cache):
         # Print final summary and shutdown
         #latest_values_cache.print_summary()
         telemetry_cache.publish_cached_data(time.time())
-        time_series_logger.shutdown()
+        # time_series_logger.shutdown()
     finally:
         print("Shutting down CAN processing components...")
         # time_series_logger.shutdown()  # Ensure CSV logger flushes its buffer
@@ -198,15 +199,12 @@ async def handler(websocket, latest_values_cache):
 
 async def main():
     try:
-        # Initialize components for WebSocket
-        latest_values = LatestValuesCache()
-        
         # Start CAN processing task
-        can_task = asyncio.create_task(process_can_messages(latest_values))
+        can_task = asyncio.create_task(process_can_messages())
         
-        print("Websocket server on localhost:8001")
-        async with serve(lambda ws: handler(ws, latest_values), "", 8001):
-            await asyncio.get_running_loop().create_future()
+        # print("Websocket server on localhost:8001")
+        # async with serve(lambda ws: handler(ws, latest_values), "", 8001):
+        #     await asyncio.get_running_loop().create_future()
     except asyncio.exceptions.CancelledError:
         print("\nProgram interrupted. Exiting...")
     finally:
