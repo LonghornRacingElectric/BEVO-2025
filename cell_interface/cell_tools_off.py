@@ -44,10 +44,10 @@ def power_on_module():
 
 
 def main():
-    # power_on_module()
-    # try:
-    #     power_on_module()
-    # finally:
+#    power_on_module()
+#    try:
+#         power_on_module()
+#    finally:
     shutdown_module()
     lgpio.gpiochip_close(h)  # Cleanup GPIO
 

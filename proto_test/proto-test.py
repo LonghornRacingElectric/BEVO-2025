@@ -1,7 +1,7 @@
 import template_pb2 
 import paho.mqtt.client as mqtt
 
-MQTT_BROKER = "192.168.1.109"
+MQTT_BROKER = "3.135.193.194"
 MQTT_PORT = 1883
 MQTT_TOPIC = "data"
 
