@@ -1,0 +1,19 @@
+[Unit]
+Description=BEVO Telemetry System
+After=basic.target
+Wants=
+
+[Service]
+Type=simple
+WorkingDirectory=/home/lhre/Documents/BEVO-2025
+ExecStart=/home/lhre/Documents/BEVO-2025/start_telemetry.sh
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Environment variables if needed
+Environment=PYTHONPATH=/home/lhre/Documents/BEVO-2025
+
+[Install]
+WantedBy=multi-user.target
