@@ -109,7 +109,7 @@ async def process_can_messages(latest_values_cache: Optional[LatestValuesCache] 
                                 print(f"  -> Error processing CAN 0x{can_id:03X}: {e}")
                                 print(f"  -> Data bytes: {[f'{b:02X}' for b in msg.data]}")
                         # else:
-                        #     prinit(f"  -> No mapping found for CAN ID 0x{can_id:03X}")
+                        #     print(f"  -> No mapping found for CAN ID 0x{can_id:03X}")
                 else:
                     # Print a message every 10 seconds to show the system is running
                     if int(current_time) % 10 == 0 and int(current_time) != int(time.time() - 0.01):
