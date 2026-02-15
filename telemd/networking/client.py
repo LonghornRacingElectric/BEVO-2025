@@ -2,6 +2,7 @@ import paho.mqtt.client as mqtt
 import os
 import requests
 import time
+import threading
 from protobuf import publish_msg
 
 class TelemetryCache:
@@ -12,8 +13,9 @@ class TelemetryCache:
         self.cache = {}  # field_name -> latest_value
         self.last_publish_time = time.time()
         self.publish_interval = publish_interval
+        self.lock = threading.Lock()
         # Initialize odometer value from file at root of telemd folder
-        self.odometer = self._load_odometer()
+        # self.odometer = self._load_odometer()
 
     # -------------------------
     # Odometer persistence
@@ -61,78 +63,79 @@ class TelemetryCache:
         
     def update_value(self, can_id, field_name, value, index=None, size=None):
         """Cache a telemetry value, handling repeated fields."""
-        if index is not None:
-            # It's a repeated field, store it in a list
-            if field_name not in self.cache:
-                if size is not None:
-                    self.cache[field_name] = [None] * size
-                else:
-                    # Fallback if size is not provided, though it should be
-                    self.cache[field_name] = []
+        with self.lock:
+            if index is not None:
+                # It's a repeated field, store it in a list
+                if field_name not in self.cache:
+                    if size is not None:
+                        self.cache[field_name] = [None] * size
+                    else:
+                        # Fallback if size is not provided, though it should be
+                        self.cache[field_name] = []
 
-            if index < len(self.cache[field_name]):
-                self.cache[field_name][index] = value
+                if index < len(self.cache[field_name]):
+                    self.cache[field_name][index] = value
+                else:
+                    # Handle cases where index is out of bounds
+                    print(f"Warning: index {index} out of bounds for {field_name}")
             else:
-                # Handle cases where index is out of bounds
-                print(f"Warning: index {index} out of bounds for {field_name}")
-        else:
-            # It's a single value field
-            self.cache[field_name] = value
+                # It's a single value field
+                self.cache[field_name] = value
         
     def should_publish(self, current_time):
         """Check if it's time to publish"""
-        return current_time - self.last_publish_time >= self.publish_interval
+        with self.lock:
+            return current_time - self.last_publish_time >= self.publish_interval
         
     def publish_cached_data(self, current_time):
         """Publish all complete cached data to MQTT"""
-        if not self.cache:
-            return
+        with self.lock:
+            if not self.cache:
+                return
 
-        complete_fields = {}
-        for field_name, value in self.cache.items():
-            if isinstance(value, list):
-                # Check if all elements in the list are not None
-                if all(v is not None for v in value):
+            complete_fields = {}
+            for field_name, value in self.cache.items():
+                if isinstance(value, list):
+                    if all(v is not None for v in value):
+                        complete_fields[field_name] = value
+                else:
                     complete_fields[field_name] = value
-            else:
-                # It's a single value, so it's always "complete"
-                complete_fields[field_name] = value
-        
-        if not complete_fields:
-            return
 
-        #! TESTING REQUIRED ||| compute odometer value
-        speed = complete_fields.get("dynamics.blw_speed") #! dunno if this is the actual value
-        if speed is not None:
-            delta_t = current_time - self.last_publish_time
-            self.odometer += speed * delta_t / 1000  # preserve original scaling
-            self.update_value(None, "diagnostics.odometer", self.odometer)
-            # Persist updated odometer value
-            self._save_odometer()
-        
-        # Get current packet ID (local, not from server)
-        packet_id = self.mqtt_manager.get_packet_id()
-        
-        # Create telemetry packet with all cached values
-        telemetry_data = {
-            "timestamp": current_time,
-            "packet_id": packet_id,
-            "fields": complete_fields,
-        }
-        
+            if not complete_fields:
+                return
+
+            #! TESTING REQUIRED ||| compute odometer value
+            # speed = complete_fields.get("dynamics.blw_speed")  #! dunno if this is the actual value
+            # if speed is not None:
+            #     delta_t = current_time - self.last_publish_time
+            #     self.odometer += speed * delta_t / 1000  # preserve original scaling
+            #     # Keep cache and snapshot in sync
+            #     self.cache["diagnostics.odometer"] = self.odometer
+            #     complete_fields["diagnostics.odometer"] = self.odometer
+
+            # Get current packet ID (local, not from server)
+            packet_id = self.mqtt_manager.get_packet_id()
+
+            telemetry_data = {
+                "timestamp": current_time,
+                "packet_id": packet_id,
+                "fields": complete_fields,
+            }
+
         # Publish via MQTT (this will increment packet ID after successful publish)
         success = self.mqtt_manager.publish(telemetry_data, publish_msg)
-        
-        if success:
-            # Clear only the published fields from the cache
-            for field_name in complete_fields:
-                del self.cache[field_name]
 
-            self.last_publish_time = current_time
-            
-            # print(
-            #     f"Published {len(telemetry_data['fields'])} fields to MQTT (packet {packet_id})"
-            # )
+        if success:
+            with self.lock:
+                # Clear only the published fields from the cache
+                for field_name in complete_fields:
+                    if field_name in self.cache:
+                        del self.cache[field_name]
+
+                self.last_publish_time = current_time
+
+            # Persist updated odometer value
+            # self._save_odometer() // dont save ts
         else:
             print(f"Failed to publish packet {packet_id}, will retry next cycle")
 
@@ -170,14 +173,25 @@ class MQTTManager:
     
     def _fetch_initial_packet_id(self):
         """Fetch initial packet ID from server (only called once during initialization)"""
+        """
         try:
-            #res = requests.get("https://lhrelectric.org/webtool/handshake/")
-            self.packet_id = 0
-            print(f"Retrieved initial packet ID: {self.packet_id}")
+            res = requests.get("https://192.168.1.109/api/handshake") # defaults to angelique here
+            res.raise_for_status()
+            data = res.json()
+            p_id = data.get("last_packet")
+            if p_id is not None:
+                self.packet_id = int(p_id) + 1
+                print(f"Retrieved initial packet ID: {self.packet_id}")
+            else:
+                self.packet_id = 0
+                print(f"Using default packet ID: 0: {self.packet_id}")
         except Exception as e:
             print(f"Warning: Could not get handshake data: {e}")
             print("Using default packet ID: 0")
             self.packet_id = 0
+        """
+        self.packet_id = 0
+        
     
     def get_packet_id(self):
         """Get current packet ID (does not fetch from server)"""

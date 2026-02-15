@@ -5,6 +5,8 @@ import time
 import os
 import json
 import statistics
+from typing import Optional
+import requests
 
 # Import our modular components
 from interfaces.interface import CANInterface
@@ -16,9 +18,32 @@ from core.field_mappings import CAN_MAPPING, get_protobuf_field_and_index, CellD
 MQTT_PUBLISH_RATE = 10  # Hz
 MQTT_PUBLISH_INTERVAL = 1.0 / MQTT_PUBLISH_RATE  # ~100ms
 
-os.environ["p_id"] = "0"
+def set_packet_id():
+    """Fetches packet ID from the handshake API and sets the environment variable."""
+    try:
+        response = requests.get("https://lhrelectric.org/api/handshake", timeout=5)
+        response.raise_for_status()  # Raise an exception for bad status codes
+        p_id = response.json().get("packet_id")
+        
+        if p_id is not None:
+            print(f"Successfully fetched packet ID: {p_id}")
+            os.environ["p_id"] = str(p_id)
+        else:
+            print("Handshake successful, but 'p_id' not found in response. Using default '0'.")
+            os.environ["p_id"] = "0"
+            
+    except requests.exceptions.RequestException as e:
+        print(f"Failed to connect to handshake API: {e}. Using default packet ID '0'.")
+        os.environ["p_id"] = "0"
+    except ValueError: # Catches JSON decoding errors
+        print("Failed to decode handshake response. Using default packet ID '0'.")
+        os.environ["p_id"] = "0"
 
-async def process_can_messages(latest_values_cache):
+# Set the packet ID on startup
+# set_packet_id()
+
+
+async def process_can_messages(latest_values_cache: Optional[LatestValuesCache] = None):
     """Process CAN messages independently of WebSocket connections"""
     # Initialize components
     can_interface = CANInterface()
@@ -36,10 +61,18 @@ async def process_can_messages(latest_values_cache):
     #     f"Starting CAN message processing with {MQTT_PUBLISH_RATE}Hz MQTT publishing..."
     # )
     
+    publish_lock = asyncio.Lock()
+
+    async def _publish_cached(current_time):
+        async with publish_lock:
+            await asyncio.to_thread(telemetry_cache.publish_cached_data, current_time)
+
     try:
         while True:
             try:
-                msg_or_msgs = can_interface.recv(timeout=0.01)
+                # Offload potentially blocking CAN recv to a thread to avoid
+                # stalling the asyncio event loop.
+                msg_or_msgs = await asyncio.to_thread(can_interface.recv, 0.01)
                 current_time = time.time()
                 
                 if msg_or_msgs:
@@ -51,8 +84,8 @@ async def process_can_messages(latest_values_cache):
                         
                         if 0x370 <= can_id <= 0x392:
                             all_vals, avg_val = aggregator.process_voltage(can_id, msg.data)
-                            latest_values_cache.update_value("diagnostics.cells_v", all_vals)
-                            latest_values_cache.update_value("pack.avg_cell_v", avg_val)
+                            # latest_values_cache.update_value("diagnostics.cells_v", all_vals)
+                            # latest_values_cache.update_value("pack.avg_cell_v", avg_val)
                             telemetry_cache.update_value(can_id, "diagnostics.cells_v", all_vals)
                             telemetry_cache.update_value(can_id, "pack.avg_cell_v", avg_val)
                             # time_series_logger.log_value("diagnostics.cells_v", str(all_vals), current_time)
@@ -60,8 +93,8 @@ async def process_can_messages(latest_values_cache):
                         
                         elif 0x470 <= can_id <= 0x486:
                             all_vals, avg_val = aggregator.process_temperature(can_id, msg.data)
-                            latest_values_cache.update_value("thermal.cells_temp", all_vals)
-                            latest_values_cache.update_value("pack.avg_cell_temp", avg_val)
+                            # latest_values_cache.update_value("thermal.cells_temp", all_vals)
+                            # latest_values_cache.update_value("pack.avg_cell_temp", avg_val)
                             telemetry_cache.update_value(can_id, "thermal.cells_temp", all_vals)
                             telemetry_cache.update_value(can_id, "pack.avg_cell_temp", avg_val)
                             #time_series_logger.log_value("thermal.cells_temp", str(all_vals), current_time)
@@ -86,7 +119,7 @@ async def process_can_messages(latest_values_cache):
                                             latest_values_cache.update_value(proto_field, value, proto_index, proto_size)
                                             telemetry_cache.update_value(can_id, proto_field, value, proto_index, proto_size)
                                             # time_series_logger.log_value(field_name, value, current_time)
-                                            # print(f"  -> Logged {proto_field}[{proto_index}]: {value}")
+                                            #print(f"  -> Logged {proto_field}[{proto_index}]: {value}")
                                         else:
                                             # Fallback to the original field name if no mapping is found
                                             latest_values_cache.update_value(field_name, value)
@@ -100,16 +133,17 @@ async def process_can_messages(latest_values_cache):
                             except Exception as e:
                                 print(f"  -> Error processing CAN 0x{can_id:03X}: {e}")
                                 print(f"  -> Data bytes: {[f'{b:02X}' for b in msg.data]}")
-                       # else:
-                            #print(f"  -> No mapping found for CAN ID 0x{can_id:03X}")
+                        # else:
+                        #     prinit(f"  -> No mapping found for CAN ID 0x{can_id:03X}")
                 else:
                     # Print a message every 10 seconds to show the system is running
                     if int(current_time) % 10 == 0 and int(current_time) != int(time.time() - 0.01):
                         print("Waiting for CAN messages...")
                 
                 # Check if it's time to publish cached data to MQTT
-                if telemetry_cache.should_publish(current_time):
-                    telemetry_cache.publish_cached_data(current_time)
+                if telemetry_cache.should_publish(current_time) and not publish_lock.locked():
+                    #print(telemetry_cache)
+                    asyncio.create_task(_publish_cached(current_time))
                 
                 # Print summary every 5 seconds
                 if current_time - latest_values_cache.last_update_time >= 5.0:
@@ -125,7 +159,7 @@ async def process_can_messages(latest_values_cache):
         # Print final summary and shutdown
         #latest_values_cache.print_summary()
         telemetry_cache.publish_cached_data(time.time())
-        time_series_logger.shutdown()
+        # time_series_logger.shutdown()
     finally:
         print("Shutting down CAN processing components...")
         # time_series_logger.shutdown()  # Ensure CSV logger flushes its buffer
@@ -190,15 +224,13 @@ async def handler(websocket, latest_values_cache):
 
 async def main():
     try:
-        # Initialize components for WebSocket
-        latest_values = LatestValuesCache()
-        
+        latest_values=LatestValuesCache()
         # Start CAN processing task
         can_task = asyncio.create_task(process_can_messages(latest_values))
         
-        print("Websocket server on localhost:8001")
-        async with serve(lambda ws: handler(ws, latest_values), "", 8001):
-            await asyncio.get_running_loop().create_future()
+        # print("Websocket server on localhost:8001")
+        # async with serve(lambda ws: handler(ws, latest_values), "", 8001):
+        await asyncio.get_running_loop().create_future()
     except asyncio.exceptions.CancelledError:
         print("\nProgram interrupted. Exiting...")
     finally:
