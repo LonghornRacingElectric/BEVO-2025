@@ -175,7 +175,10 @@ CAN_MAPPING = {
         ("Latitude", lambda d: process_can_data(d, 0, 4, signed=True, scale=1e-7)), 
         ("Longitude", lambda d: process_can_data(d, 4, 8, signed=True, scale=1e-7)),
            ], # unpack csv name to protobuf
-    #0x601:[("Longitude", lambda d: process_can_data(d, 0, 2, signed=True, scale=0.001))]
+    0x601:[
+        ("dynamics.gps_velocity", lambda d: process_can_data(d, 0, 4, signed=True, scale=0.001)),
+        ("dynamics.gps_heading", lambda d: process_can_data(d, 4, 6, signed=True, scale=0.01)),
+        ]
 }
 
 class CellDataAggregator:
