@@ -1,5 +1,6 @@
 import paho.mqtt.client as mqtt
 import os
+import json
 import requests
 import time
 import threading
@@ -150,18 +151,41 @@ class MQTTManager:
         self.client = None
         self.connected = False
         self.packet_id = 0
-        
+
+    def on_connect(self, client, userdata, flags, rc):
+        if rc == 0:
+            client.subscribe("server-communication")
+            client.publish("client-connections", "BEVO-Angelique") # Server bookkeeping
+        else:
+            print(f"Failed to connect to MQTT broker, return code {rc}")
+
+    def on_message(self, client, userdata, msg):
+        received_topic = msg.topic
+        received_message = json.loads(msg.payload.decode())
+        print(f"Received message on topic '{received_topic}': {received_message}")
+
+        if (received_topic == "server-communication"):
+            if ("packet_id" in received_message):
+                self.packet_id = max(self.packet_id, int(received_message["packet_id"]) + 1)
+                print(f"Updated packet ID to {self.packet_id} based on server message")
+            else:
+                # TODO other server communciation as needed routing logic
+                pass
+                        
     def initialize(self):
         """Initialize MQTT connection and fetch initial packet ID"""
         try:
             # Use the newer MQTT client API to avoid deprecation warning
-            self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+            self.client = mqtt.Client( mqtt.CallbackAPIVersion.VERSION2, client_id = "BEVO-Angelique")
             self.client.connect(self.broker, self.port, 60)
+            self.client.on_connect = self.on_connect # Route the message handlers
+            self.client.on_message = self.on_message
+            self.client.loop_start()  # Start the network loop
             self.connected = True
             print(f"Successfully connected to MQTT broker at {self.broker}:{self.port}")
-            
-            # Fetch initial packet ID from server
-            self._fetch_initial_packet_id()
+
+            # Fetch initial packet ID from server, VPN routing issues may cause to fail
+            # self._fetch_initial_packet_id()
             
             return True
         except Exception as e:
@@ -190,7 +214,7 @@ class MQTTManager:
             print("Using default packet ID: 0")
             self.packet_id = 0
         """
-        self.packet_id = 0
+        pass
         
     
     def get_packet_id(self):
@@ -291,6 +315,7 @@ class MQTTManager:
         """Clean shutdown of MQTT connection"""
         if self.client:
             try:
+                self.client.loop_stop()  # Stop the network loop
                 self.client.disconnect()
                 print("MQTT connection closed")
             except Exception as e:
